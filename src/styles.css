@@ -1,0 +1,47 @@
+:root {
+  color: #24432f;
+  background: #c9f1ff;
+  font-family:
+    Inter, ui-rounded, "SF Pro Rounded", system-ui, -apple-system, BlinkMacSystemFont,
+    "Segoe UI", sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+  width: 100%;
+  min-width: 320px;
+  height: 100%;
+  min-height: 100%;
+  margin: 0;
+  overflow: hidden;
+}
+
+body {
+  display: grid;
+  place-items: center;
+  background:
+    radial-gradient(circle at 20% 10%, rgba(255, 255, 255, 0.72), transparent 28%),
+    linear-gradient(180deg, #bceeff 0%, #d8f7c7 62%, #9ddc7c 100%);
+}
+
+#app {
+  display: grid;
+  place-items: center;
+  padding: 0;
+}
+
+#game-root {
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  touch-action: none;
+}
+
+canvas {
+  display: block;
+}
