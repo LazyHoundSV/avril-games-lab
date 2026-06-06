@@ -2,28 +2,171 @@ import Phaser from "phaser";
 import "./styles.css";
 import { ColorBasketGardenScene } from "./game/ColorBasketGardenScene";
 
-const parent = "game-root";
+interface GameDefinition {
+  id: string;
+  title: string;
+  description: string;
+  colors: {
+    background: string;
+    accent: string;
+    shadow: string;
+  };
+  icon: string;
+  scene: typeof Phaser.Scene;
+}
 
-const game = new Phaser.Game({
-  type: Phaser.AUTO,
-  parent,
-  backgroundColor: "#bceeff",
-  scale: {
-    mode: Phaser.Scale.RESIZE,
-    autoCenter: Phaser.Scale.CENTER_BOTH,
-    width: 960,
-    height: 540,
+const games: GameDefinition[] = [
+  {
+    id: "color-basket-garden",
+    title: "Color Basket Garden",
+    description: "Sort colorful garden toys into matching baskets.",
+    colors: {
+      background: "#d8f7c7",
+      accent: "#e9544f",
+      shadow: "#7fbe63",
+    },
+    icon: "flower",
+    scene: ColorBasketGardenScene,
   },
-  input: {
-    activePointers: 3,
-  },
-  render: {
-    antialias: true,
-    pixelArt: false,
-  },
-  scene: [ColorBasketGardenScene],
+];
+
+const app = document.querySelector<HTMLElement>("#app");
+let activeGame: Phaser.Game | undefined;
+
+if (!app) {
+  throw new Error("Missing #app root");
+}
+
+const getRequestedGame = (): GameDefinition | undefined => {
+  const params = new URLSearchParams(window.location.search);
+  const gameId = params.get("game");
+
+  return games.find((game) => game.id === gameId);
+};
+
+const drawIcon = (icon: string): string => {
+  if (icon === "flower") {
+    return `
+      <svg class="game-card__icon" viewBox="0 0 96 96" aria-hidden="true">
+        <circle cx="48" cy="48" r="12" fill="#fff2a6" />
+        <circle cx="48" cy="22" r="17" fill="#e9544f" />
+        <circle cx="70" cy="35" r="17" fill="#f4c84f" />
+        <circle cx="62" cy="64" r="17" fill="#4fa7e8" />
+        <circle cx="34" cy="64" r="17" fill="#e9544f" />
+        <circle cx="26" cy="35" r="17" fill="#4fa7e8" />
+        <circle cx="48" cy="48" r="13" fill="#fff6c7" stroke="#24432f" stroke-width="4" />
+      </svg>
+    `;
+  }
+
+  return "";
+};
+
+const renderLanding = (): void => {
+  activeGame?.destroy(true);
+  activeGame = undefined;
+  document.title = "Avril Games Lab";
+  app.removeAttribute("data-screen");
+  app.innerHTML = `
+    <section class="landing-shell" aria-labelledby="landing-title">
+      <div class="landing-header">
+        <p class="landing-kicker">Avril Games Lab</p>
+        <h1 id="landing-title">Juegos para Avril</h1>
+        <p class="landing-copy">Un menú simple para entrar a los juegos aprobados y construidos.</p>
+      </div>
+      <div class="games-grid" aria-label="Available games">
+        ${games
+          .map(
+            (game) => `
+              <button
+                class="game-card"
+                type="button"
+                data-game-id="${game.id}"
+                style="--card-bg: ${game.colors.background}; --card-accent: ${game.colors.accent}; --card-shadow: ${game.colors.shadow};"
+                aria-label="Open ${game.title}"
+              >
+                ${drawIcon(game.icon)}
+                <span class="game-card__title">${game.title}</span>
+                <span class="game-card__copy">${game.description}</span>
+                <span class="game-card__action">Play</span>
+              </button>
+            `,
+          )
+          .join("")}
+      </div>
+    </section>
+  `;
+
+  app.querySelectorAll<HTMLButtonElement>("[data-game-id]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const gameId = button.dataset.gameId;
+      const nextGame = games.find((game) => game.id === gameId);
+
+      if (nextGame) {
+        window.history.pushState({}, "", `?game=${nextGame.id}`);
+        startGame(nextGame);
+      }
+    });
+  });
+};
+
+const startGame = (gameDefinition: GameDefinition): void => {
+  activeGame?.destroy(true);
+  document.title = gameDefinition.title;
+  app.dataset.screen = "game";
+  app.innerHTML = `
+    <button class="menu-button" type="button" aria-label="Back to games menu">
+      <span aria-hidden="true">←</span>
+      Menu
+    </button>
+    <div id="game-root"></div>
+  `;
+
+  app.querySelector<HTMLButtonElement>(".menu-button")?.addEventListener("click", () => {
+    window.history.pushState({}, "", window.location.pathname);
+    renderLanding();
+  });
+
+  activeGame = new Phaser.Game({
+    type: Phaser.AUTO,
+    parent: "game-root",
+    backgroundColor: "#bceeff",
+    scale: {
+      mode: Phaser.Scale.RESIZE,
+      autoCenter: Phaser.Scale.CENTER_BOTH,
+      width: 960,
+      height: 540,
+    },
+    input: {
+      activePointers: 3,
+    },
+    render: {
+      antialias: true,
+      pixelArt: false,
+    },
+    scene: [gameDefinition.scene],
+  });
+};
+
+window.addEventListener("popstate", () => {
+  const requestedGame = getRequestedGame();
+
+  if (requestedGame) {
+    startGame(requestedGame);
+    return;
+  }
+
+  renderLanding();
 });
 
 window.addEventListener("beforeunload", () => {
-  game.destroy(true);
+  activeGame?.destroy(true);
 });
+
+const initialGame = getRequestedGame();
+
+if (initialGame) {
+  startGame(initialGame);
+} else {
+  renderLanding();
+}

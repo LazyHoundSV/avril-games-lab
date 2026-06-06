@@ -18,7 +18,6 @@ body,
   height: 100%;
   min-height: 100%;
   margin: 0;
-  overflow: hidden;
 }
 
 body {
@@ -27,11 +26,18 @@ body {
   background:
     radial-gradient(circle at 20% 10%, rgba(255, 255, 255, 0.72), transparent 28%),
     linear-gradient(180deg, #bceeff 0%, #d8f7c7 62%, #9ddc7c 100%);
+  overflow-x: hidden;
 }
 
 #app {
   display: grid;
   place-items: center;
+  overflow: auto;
+  padding: clamp(20px, 4vw, 44px);
+}
+
+#app[data-screen="game"] {
+  overflow: hidden;
   padding: 0;
 }
 
@@ -44,4 +50,185 @@ body {
 
 canvas {
   display: block;
+}
+
+button {
+  font: inherit;
+}
+
+.landing-shell {
+  width: min(1080px, 100%);
+  min-width: 0;
+}
+
+.landing-header {
+  margin: 0 auto clamp(22px, 4vw, 34px);
+  max-width: 720px;
+  text-align: center;
+}
+
+.landing-kicker {
+  margin: 0 0 10px;
+  color: #3e7c45;
+  font-size: 0.9rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.landing-header h1 {
+  margin: 0;
+  color: #1e3b2a;
+  font-size: clamp(2.15rem, 6vw, 4.6rem);
+  line-height: 0.94;
+}
+
+.landing-copy {
+  margin: 16px auto 0;
+  width: 100%;
+  max-width: 520px;
+  color: #31543d;
+  font-size: clamp(1rem, 2vw, 1.2rem);
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+.games-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 250px), 1fr));
+  gap: clamp(16px, 3vw, 24px);
+}
+
+.game-card {
+  position: relative;
+  display: grid;
+  width: 100%;
+  min-width: 0;
+  min-height: 310px;
+  padding: 24px;
+  cursor: pointer;
+  border: 4px solid #ffffff;
+  border-radius: 8px;
+  background:
+    radial-gradient(circle at 80% 10%, rgba(255, 255, 255, 0.75), transparent 28%),
+    var(--card-bg);
+  box-shadow: 0 14px 0 var(--card-shadow), 0 22px 38px rgba(35, 68, 47, 0.2);
+  color: #24432f;
+  gap: 12px;
+  grid-template-rows: 1fr auto auto auto;
+  text-align: left;
+  touch-action: manipulation;
+  transition:
+    transform 150ms ease,
+    box-shadow 150ms ease;
+}
+
+.game-card:hover,
+.game-card:focus-visible {
+  box-shadow: 0 10px 0 var(--card-shadow), 0 18px 30px rgba(35, 68, 47, 0.2);
+  outline: 4px solid rgba(255, 255, 255, 0.9);
+  outline-offset: 3px;
+  transform: translateY(4px);
+}
+
+.game-card:active {
+  box-shadow: 0 4px 0 var(--card-shadow), 0 10px 20px rgba(35, 68, 47, 0.16);
+  transform: translateY(10px);
+}
+
+.game-card__icon {
+  align-self: center;
+  justify-self: center;
+  width: min(48vw, 150px);
+  height: min(48vw, 150px);
+  filter: drop-shadow(0 8px 0 rgba(36, 67, 47, 0.16));
+}
+
+.game-card__title {
+  display: block;
+  width: 100%;
+  color: #1e3b2a;
+  font-size: clamp(1.65rem, 4vw, 2.25rem);
+  font-weight: 900;
+  line-height: 1;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+.game-card__copy {
+  display: block;
+  width: 100%;
+  color: #345d42;
+  font-size: 1rem;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+.game-card__action {
+  display: inline-grid;
+  width: fit-content;
+  min-width: 92px;
+  min-height: 46px;
+  place-items: center;
+  padding: 0 20px;
+  border-radius: 999px;
+  background: var(--card-accent);
+  color: #ffffff;
+  font-size: 1rem;
+  font-weight: 900;
+  box-shadow: inset 0 -4px 0 rgba(36, 67, 47, 0.2);
+}
+
+.menu-button {
+  position: fixed;
+  z-index: 20;
+  top: max(12px, env(safe-area-inset-top));
+  left: max(12px, env(safe-area-inset-left));
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  padding: 0 16px;
+  border: 3px solid #ffffff;
+  border-radius: 999px;
+  background: rgba(36, 67, 47, 0.82);
+  box-shadow: 0 8px 20px rgba(36, 67, 47, 0.24);
+  color: #ffffff;
+  cursor: pointer;
+  font-weight: 900;
+  gap: 8px;
+}
+
+.menu-button:focus-visible {
+  outline: 4px solid #fff6c7;
+  outline-offset: 3px;
+}
+
+@media (max-width: 560px) {
+  #app {
+    align-items: start;
+    justify-items: stretch;
+    padding: 22px 16px 28px;
+  }
+
+  .landing-shell {
+    width: 100%;
+    max-width: 358px;
+  }
+
+  .landing-header {
+    text-align: left;
+  }
+
+  .landing-copy {
+    margin-left: 0;
+  }
+
+  .game-card {
+    max-width: 358px;
+    min-height: 268px;
+    padding: 22px;
+  }
 }
