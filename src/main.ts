@@ -1,6 +1,12 @@
 import Phaser from "phaser";
+import React from "react";
+import { createRoot, type Root } from "react-dom/client";
+import Confetti from "react-confetti-boom";
 import "./styles.css";
-import { ColorBasketGardenScene } from "./game/ColorBasketGardenScene";
+import {
+  COLOR_BASKET_GARDEN_LEVEL_COMPLETE_EVENT,
+  ColorBasketGardenScene,
+} from "./game/ColorBasketGardenScene";
 
 interface GameDefinition {
   id: string;
@@ -32,6 +38,10 @@ const games: GameDefinition[] = [
 
 const app = document.querySelector<HTMLElement>("#app");
 let activeGame: Phaser.Game | undefined;
+let confettiRoot: Root | undefined;
+let clearConfettiTimer: number | undefined;
+
+const CONFETTI_COLORS = ["#e9544f", "#f4c84f", "#2f8de8", "#63bd34", "#9a58e8", "#ffffff"];
 
 if (!app) {
   throw new Error("Missing #app root");
@@ -63,6 +73,7 @@ const drawIcon = (icon: string): string => {
 };
 
 const renderLanding = (): void => {
+  cleanupConfetti();
   activeGame?.destroy(true);
   activeGame = undefined;
   document.title = "Avril Games Lab";
@@ -111,6 +122,7 @@ const renderLanding = (): void => {
 };
 
 const startGame = (gameDefinition: GameDefinition): void => {
+  cleanupConfetti();
   activeGame?.destroy(true);
   document.title = gameDefinition.title;
   app.dataset.screen = "game";
@@ -120,6 +132,7 @@ const startGame = (gameDefinition: GameDefinition): void => {
       Menu
     </button>
     <div id="game-root"></div>
+    <div id="confetti-root" aria-hidden="true"></div>
   `;
 
   app.querySelector<HTMLButtonElement>(".menu-button")?.addEventListener("click", () => {
@@ -146,6 +159,54 @@ const startGame = (gameDefinition: GameDefinition): void => {
     },
     scene: [gameDefinition.scene],
   });
+
+  const confettiRootElement = document.querySelector<HTMLElement>("#confetti-root");
+
+  if (confettiRootElement) {
+    confettiRoot = createRoot(confettiRootElement);
+    activeGame.events.on(COLOR_BASKET_GARDEN_LEVEL_COMPLETE_EVENT, showLevelCompleteConfetti);
+  }
+};
+
+const cleanupConfetti = (): void => {
+  if (clearConfettiTimer !== undefined) {
+    window.clearTimeout(clearConfettiTimer);
+    clearConfettiTimer = undefined;
+  }
+
+  confettiRoot?.unmount();
+  confettiRoot = undefined;
+};
+
+const showLevelCompleteConfetti = (): void => {
+  if (!confettiRoot) {
+    return;
+  }
+
+  if (clearConfettiTimer !== undefined) {
+    window.clearTimeout(clearConfettiTimer);
+  }
+
+  confettiRoot.render(
+    React.createElement(Confetti, {
+      key: Date.now(),
+      mode: "boom",
+      x: 0.5,
+      y: 0.38,
+      particleCount: window.innerWidth < 560 ? 34 : 42,
+      colors: CONFETTI_COLORS,
+      effectCount: 1,
+      spreadDeg: 46,
+      launchSpeed: 1.05,
+      shapeSize: window.innerWidth < 560 ? 9 : 11,
+      opacityDeltaMultiplier: 0.78,
+    }),
+  );
+
+  clearConfettiTimer = window.setTimeout(() => {
+    confettiRoot?.render(null);
+    clearConfettiTimer = undefined;
+  }, 2500);
 };
 
 window.addEventListener("popstate", () => {
@@ -160,6 +221,7 @@ window.addEventListener("popstate", () => {
 });
 
 window.addEventListener("beforeunload", () => {
+  cleanupConfetti();
   activeGame?.destroy(true);
 });
 

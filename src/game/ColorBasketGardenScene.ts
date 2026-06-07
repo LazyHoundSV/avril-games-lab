@@ -10,6 +10,7 @@ import {
 } from "./sorting";
 
 const ASSET_BASE_PATH = "/assets/color-basket-garden";
+const GARDEN_BACKGROUND_ASSET_KEY = "garden-background";
 
 const COLOR_HEX: Record<BasketColor, number> = {
   red: 0xe9544f,
@@ -28,6 +29,7 @@ const BASKET_ASSET_FILES: Record<BasketColor, string> = {
 };
 
 const HELPER_ASSET_KEY = "kitten-helper";
+export const COLOR_BASKET_GARDEN_LEVEL_COMPLETE_EVENT = "color-basket-garden:level-complete";
 
 const OBJECT_ASSET_FILES: Record<GardenAssetKey, string> = {
   "red-flower": "garden_red_flower_124.png",
@@ -86,6 +88,7 @@ export class ColorBasketGardenScene extends Phaser.Scene {
   }
 
   preload(): void {
+    this.load.image(GARDEN_BACKGROUND_ASSET_KEY, `${ASSET_BASE_PATH}/garden_background.png`);
     this.load.image(HELPER_ASSET_KEY, `${ASSET_BASE_PATH}/kitty_helper.png`);
 
     for (const [color, file] of Object.entries(BASKET_ASSET_FILES) as [BasketColor, string][]) {
@@ -129,36 +132,10 @@ export class ColorBasketGardenScene extends Phaser.Scene {
   private drawGarden(): void {
     const w = this.stageWidth;
     const h = this.stageHeight;
-    this.add.rectangle(w / 2, h / 2, w, h, 0xbceeff);
+    const background = this.add.image(w / 2, h / 2, GARDEN_BACKGROUND_ASSET_KEY).setDepth(0);
+    const backgroundScale = Math.max(w / background.width, h / background.height);
 
-    const sky = this.add.graphics();
-    sky.fillGradientStyle(0xbceeff, 0xbceeff, 0xe8f8ff, 0xe8f8ff, 1);
-    sky.fillRect(0, 0, w, h * 0.6);
-
-    this.drawCloud(w * 0.18, h * 0.13, 0.7 * this.uiScale);
-    this.drawCloud(w * 0.66, h * 0.17, 0.52 * this.uiScale);
-
-    const hills = this.add.graphics();
-    hills.fillStyle(0xbde89d, 1);
-    hills.fillEllipse(w * 0.22, h * 0.58, w * 0.58, h * 0.23);
-    hills.fillEllipse(w * 0.76, h * 0.58, w * 0.66, h * 0.27);
-
-    const grass = this.add.graphics();
-    grass.fillStyle(0x8bd26c, 1);
-    grass.fillRect(0, h * 0.52, w, h * 0.48);
-    grass.fillStyle(0xefd28a, 1);
-    grass.fillEllipse(w / 2, h * 0.77, w * 0.92, h * 0.32);
-    grass.fillStyle(0xdfb975, 0.8);
-    grass.fillEllipse(w / 2, h * 0.8, w * 0.82, h * 0.22);
-    grass.fillStyle(0x6fbd55, 1);
-    grass.fillEllipse(w / 2, h + 8, w * 1.12, h * 0.18);
-
-    for (const x of [w * 0.07, w * 0.14, w * 0.74, w * 0.86]) {
-      this.drawTinyFlower(x, h * 0.54 + Phaser.Math.Between(-10, 22), 0xfff0a4, 0xeb6f8d, 0.5);
-    }
-
-    this.add.circle(w * 0.1, h * 0.12, 34 * this.uiScale, 0xffef8a, 0.88);
-    this.add.circle(w * 0.1, h * 0.12, 50 * this.uiScale, 0xffef8a, 0.16);
+    background.setScale(backgroundScale);
   }
 
   private createHelper(x: number, y: number, scale: number): void {
@@ -420,6 +397,7 @@ export class ColorBasketGardenScene extends Phaser.Scene {
 
   private completeRound(): void {
     this.input.enabled = false;
+    this.game.events.emit(COLOR_BASKET_GARDEN_LEVEL_COMPLETE_EVENT);
     this.sparkle(this.stageWidth / 2, this.stageHeight * 0.38, 0xffffff, 18);
 
     for (const basket of this.baskets) {
@@ -499,15 +477,6 @@ export class ColorBasketGardenScene extends Phaser.Scene {
       duration: 220,
       ease: "Back.out",
     });
-  }
-
-  private drawCloud(x: number, y: number, scale: number): void {
-    const cloud = this.add.graphics();
-    cloud.fillStyle(0xffffff, 0.82);
-    cloud.fillCircle(x - 32 * scale, y + 6 * scale, 22 * scale);
-    cloud.fillCircle(x, y - 8 * scale, 31 * scale);
-    cloud.fillCircle(x + 34 * scale, y + 4 * scale, 24 * scale);
-    cloud.fillRoundedRect(x - 52 * scale, y + 4 * scale, 104 * scale, 28 * scale, 14 * scale);
   }
 
   private drawTinyFlower(
