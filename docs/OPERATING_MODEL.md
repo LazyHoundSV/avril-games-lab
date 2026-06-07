@@ -34,3 +34,14 @@ This repo is the implementation lane for small educational web games for Avril.
 - Browser-playable and touch-first.
 - Offline-friendly.
 - No backend initially.
+
+## Deployment Workflow
+
+- Cloudflare should build preview deployments for pull requests and feature branches.
+- Keep production pointed at `main`; do not switch production to a feature branch just to test a game.
+- For each implementation PR, Hawks should verify the Cloudflare preview deployment, capture the preview URL, and add it to the PR/issue/build note.
+- Promote to production only by merging an approved PR into `main`.
+- GitHub Actions deploys previews to Cloudflare Pages using:
+  - `CLOUDFLARE_ACCOUNT_ID` repo secret
+  - `CLOUDFLARE_API_TOKEN` repo secret
+  - optional `CLOUDFLARE_PROJECT_NAME` repo variable, defaulting to `avril-games-lab`
