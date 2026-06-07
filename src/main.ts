@@ -128,7 +128,7 @@ const startGame = (gameDefinition: GameDefinition): void => {
   });
 
   activeGame = new Phaser.Game({
-    type: Phaser.AUTO,
+    type: Phaser.CANVAS,
     parent: "game-root",
     backgroundColor: "#bceeff",
     scale: {
