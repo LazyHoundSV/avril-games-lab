@@ -28,6 +28,18 @@ This repo is the implementation lane for small educational web games for Avril.
 6. Hawks implements one approved issue at a time.
 7. Hawks validates desktop/mobile playability before marking done.
 
+## Deployment Workflow
+
+- Cloudflare should build preview deployments for pull requests and feature branches.
+- Keep production pointed at `main`; do not switch production to a feature branch just to test a game.
+- A production build can fail while `main` contains only docs/specs. Treat the PR preview build as the authoritative deploy check for active game work.
+- For each implementation PR, Hawks should verify the Cloudflare preview deployment, capture the preview URL, and add it to the PR/issue/build note.
+- Promote to production only by merging an approved PR into `main`.
+- GitHub Actions deploys previews/production to Cloudflare Pages using:
+  - `CLOUDFLARE_ACCOUNT_ID` repo secret
+  - `CLOUDFLARE_API_TOKEN` repo secret
+  - optional `CLOUDFLARE_PROJECT_NAME` repo variable, defaulting to `avril-games-lab`
+
 ## Technical Default
 
 - Phaser 3 + Vite + TypeScript.
