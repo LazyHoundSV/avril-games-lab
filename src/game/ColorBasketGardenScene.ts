@@ -20,6 +20,7 @@ interface BasketTarget {
   body: Phaser.GameObjects.Graphics;
   glow: Phaser.GameObjects.Ellipse;
   bodyY: number;
+  scale: number;
   sorted: number;
 }
 
@@ -29,9 +30,12 @@ interface DraggableItem {
   origin: Phaser.Math.Vector2;
 }
 
+const ACTIVE_OBJECT_LIMIT = 3;
+
 export class ColorBasketGardenScene extends Phaser.Scene {
   private baskets: BasketTarget[] = [];
   private items: DraggableItem[] = [];
+  private objectQueue: GardenObject[] = [];
   private sortedCount = 0;
   private totalCount = 0;
   private helper?: Phaser.GameObjects.Container;
@@ -48,6 +52,7 @@ export class ColorBasketGardenScene extends Phaser.Scene {
   create(): void {
     this.input.dragDistanceThreshold = 4;
     this.input.topOnly = false;
+    this.registerDragHandlers();
     this.startRound();
   }
 
@@ -58,6 +63,7 @@ export class ColorBasketGardenScene extends Phaser.Scene {
     this.children.removeAll();
     this.baskets = [];
     this.items = [];
+    this.objectQueue = [];
     this.sortedCount = 0;
     this.replayButton = undefined;
 
@@ -120,25 +126,27 @@ export class ColorBasketGardenScene extends Phaser.Scene {
   }
 
   private createBaskets(): void {
+    const isPortrait = this.stageHeight > this.stageWidth * 1.15;
     const positions = [
       { color: "red" as const, x: this.stageWidth * 0.24 },
-      { color: "yellow" as const, x: this.stageWidth * 0.5 },
-      { color: "blue" as const, x: this.stageWidth * 0.76 },
+      { color: "yellow" as const, x: this.stageWidth * (isPortrait ? 0.46 : 0.5) },
+      { color: "blue" as const, x: this.stageWidth * (isPortrait ? 0.68 : 0.76) },
     ];
     const rimY = this.stageHeight * 0.75;
-    const bodyY = rimY + 46 * this.uiScale;
-    const zoneWidth = 184 * this.uiScale;
-    const zoneHeight = 126 * this.uiScale;
+    const basketScale = this.uiScale * (isPortrait ? 0.82 : 1);
+    const bodyY = rimY + 46 * basketScale;
+    const zoneWidth = 218 * basketScale;
+    const zoneHeight = 156 * basketScale;
 
     for (const { color, x } of positions) {
-      const glow = this.add.ellipse(x, rimY + 23 * this.uiScale, 180 * this.uiScale, 118 * this.uiScale, COLOR_HEX[color], 0).setDepth(4);
+      const glow = this.add.ellipse(x, rimY + 23 * basketScale, 180 * basketScale, 118 * basketScale, COLOR_HEX[color], 0).setDepth(4);
       const body = this.add.graphics().setDepth(5);
-      this.drawBasketShape(body, x, bodyY, color, 0);
-      const rim = this.add.ellipse(x, rimY, 156 * this.uiScale, 54 * this.uiScale, COLOR_HEX[color], 1).setStrokeStyle(9 * this.uiScale, COLOR_DARK_HEX[color]).setDepth(6);
-      const badge = this.add.star(x, rimY, 5, 13 * this.uiScale, 24 * this.uiScale, 0xffffff, 0.92).setStrokeStyle(4 * this.uiScale, COLOR_DARK_HEX[color]).setDepth(7);
-      const zone = this.add.zone(x, rimY + 6 * this.uiScale, zoneWidth, zoneHeight).setRectangleDropZone(zoneWidth, zoneHeight);
+      this.drawBasketShape(body, x, bodyY, color, 0, basketScale);
+      const rim = this.add.ellipse(x, rimY, 156 * basketScale, 54 * basketScale, COLOR_HEX[color], 1).setStrokeStyle(9 * basketScale, COLOR_DARK_HEX[color]).setDepth(6);
+      const badge = this.add.star(x, rimY, 5, 13 * basketScale, 24 * basketScale, 0xffffff, 0.92).setStrokeStyle(4 * basketScale, COLOR_DARK_HEX[color]).setDepth(7);
+      const zone = this.add.zone(x, rimY + 6 * basketScale, zoneWidth, zoneHeight).setRectangleDropZone(zoneWidth, zoneHeight);
 
-      this.baskets.push({ color, zone, rim, body, glow, bodyY, sorted: 0 });
+      this.baskets.push({ color, zone, rim, body, glow, bodyY, scale: basketScale, sorted: 0 });
       this.tweens.add({
         targets: [body, rim, badge],
         y: "-=4",
@@ -150,8 +158,15 @@ export class ColorBasketGardenScene extends Phaser.Scene {
     }
   }
 
-  private drawBasketShape(graphics: Phaser.GameObjects.Graphics, x: number, y: number, color: BasketColor, fillBonus: number): void {
-    const s = this.uiScale;
+  private drawBasketShape(
+    graphics: Phaser.GameObjects.Graphics,
+    x: number,
+    y: number,
+    color: BasketColor,
+    fillBonus: number,
+    scale = this.uiScale,
+  ): void {
+    const s = scale;
     graphics.clear();
     graphics.fillStyle(COLOR_HEX[color], 1);
     graphics.lineStyle(7 * s, COLOR_DARK_HEX[color], 1);
@@ -169,50 +184,27 @@ export class ColorBasketGardenScene extends Phaser.Scene {
   }
 
   private createObjects(): void {
-    const objects = createRoundObjects();
-    this.totalCount = objects.length;
-    const left = this.stageWidth * 0.2;
-    const center = this.stageWidth * 0.5;
-    const right = this.stageWidth * 0.8;
-    const top = this.stageHeight * 0.27;
-    const middle = this.stageHeight * 0.39;
-    const low = this.stageHeight * 0.53;
+    this.objectQueue = createRoundObjects();
+    this.totalCount = this.objectQueue.length;
+    const isPortrait = this.stageHeight > this.stageWidth * 1.15;
 
-    const positions = [
-      { x: left, y: top },
-      { x: center, y: top },
-      { x: right, y: top },
-      { x: this.stageWidth * 0.32, y: middle },
-      { x: this.stageWidth * 0.68, y: middle },
-      { x: left, y: low },
-      { x: center, y: low },
-      { x: right, y: low },
-      { x: center, y: this.stageHeight * 0.18 },
+    const activePositions = [
+      new Phaser.Math.Vector2(this.stageWidth * (isPortrait ? 0.25 : 0.24), this.stageHeight * 0.31),
+      new Phaser.Math.Vector2(this.stageWidth * 0.5, this.stageHeight * 0.25),
+      new Phaser.Math.Vector2(this.stageWidth * (isPortrait ? 0.65 : 0.76), this.stageHeight * 0.49),
     ];
 
-    objects.forEach((object, index) => {
-      const position = positions[index];
-      const container = this.createGardenObject(object, position.x, position.y);
-      const draggable: DraggableItem = {
-        data: object,
-        container,
-        origin: new Phaser.Math.Vector2(position.x, position.y),
-      };
-
-      this.items.push(draggable);
-      container.setInteractive(new Phaser.Geom.Circle(0, 0, 58), Phaser.Geom.Circle.Contains);
-      this.input.setDraggable(container);
-      this.tweens.add({
-        targets: container,
-        y: position.y - 5,
-        duration: 1500 + index * 80,
-        yoyo: true,
-        repeat: -1,
-        ease: "Sine.inOut",
-      });
+    activePositions.slice(0, ACTIVE_OBJECT_LIMIT).forEach((position) => {
+      this.spawnNextObject(position);
     });
+  }
 
+  private registerDragHandlers(): void {
     this.input.on("dragstart", (_pointer: Phaser.Input.Pointer, target: Phaser.GameObjects.Container) => {
+      if (!this.items.some((item) => item.container === target)) {
+        return;
+      }
+
       target.setDepth(30);
       this.tweens.add({ targets: target, scale: 1.1, duration: 110, ease: "Sine.out" });
       this.setBasketDragState(undefined);
@@ -221,6 +213,10 @@ export class ColorBasketGardenScene extends Phaser.Scene {
     this.input.on(
       "drag",
       (_pointer: Phaser.Input.Pointer, target: Phaser.GameObjects.Container, dragX: number, dragY: number) => {
+        if (!this.items.some((item) => item.container === target)) {
+          return;
+        }
+
         target.setPosition(dragX, dragY);
         this.setBasketDragState(this.findHoveredBasket(dragX, dragY, target));
       },
@@ -241,6 +237,32 @@ export class ColorBasketGardenScene extends Phaser.Scene {
       }
 
       this.returnItem(item);
+    });
+  }
+
+  private spawnNextObject(origin: Phaser.Math.Vector2): void {
+    const object = this.objectQueue.shift();
+    if (!object) {
+      return;
+    }
+
+    const container = this.createGardenObject(object, origin.x, origin.y);
+    const draggable: DraggableItem = {
+      data: object,
+      container,
+      origin: origin.clone(),
+    };
+
+    this.items.push(draggable);
+    container.setInteractive(new Phaser.Geom.Circle(0, 0, 66), Phaser.Geom.Circle.Contains);
+    this.input.setDraggable(container);
+    this.tweens.add({
+      targets: container,
+      y: origin.y - 5,
+      duration: 1500 + this.sortedCount * 80,
+      yoyo: true,
+      repeat: -1,
+      ease: "Sine.inOut",
     });
   }
 
@@ -284,10 +306,29 @@ export class ColorBasketGardenScene extends Phaser.Scene {
   }
 
   private findHoveredBasket(x: number, y: number, target: Phaser.GameObjects.Container): BasketTarget | undefined {
-    return this.baskets.find((basket) => {
-      const bounds = basket.zone.getBounds();
-      return bounds.contains(x, y) && target.input?.enabled;
-    });
+    if (!target.input?.enabled) {
+      return undefined;
+    }
+
+    const objectRadius = 56 * this.uiScale;
+    const objectBounds = new Phaser.Geom.Rectangle(
+      x - objectRadius,
+      y - objectRadius,
+      objectRadius * 2,
+      objectRadius * 2,
+    );
+
+    return this.baskets
+      .filter((basket) => {
+        const bounds = Phaser.Geom.Rectangle.Clone(basket.zone.getBounds());
+        Phaser.Geom.Rectangle.Inflate(bounds, 28 * this.uiScale, 34 * this.uiScale);
+        return bounds.contains(x, y) || Phaser.Geom.Intersects.RectangleToRectangle(objectBounds, bounds);
+      })
+      .sort(
+        (a, b) =>
+          Phaser.Math.Distance.Between(x, y, a.zone.x, a.zone.y) -
+          Phaser.Math.Distance.Between(x, y, b.zone.x, b.zone.y),
+      )[0];
   }
 
   private setBasketDragState(active?: BasketTarget): void {
@@ -299,13 +340,14 @@ export class ColorBasketGardenScene extends Phaser.Scene {
   }
 
   private placeItem(item: DraggableItem, basket: BasketTarget): void {
+    const refillOrigin = item.origin.clone();
     item.container.disableInteractive();
     this.input.setDraggable(item.container, false);
     basket.sorted += 1;
     this.sortedCount += 1;
 
-    const targetX = basket.zone.x + (basket.sorted - 2) * 26;
-    const targetY = basket.zone.y + (22 - Math.min(basket.sorted, 3) * 6) * this.uiScale;
+    const targetX = basket.zone.x + (basket.sorted - 2) * 26 * basket.scale;
+    const targetY = basket.zone.y + (22 - Math.min(basket.sorted, 3) * 6) * basket.scale;
 
     this.tweens.killTweensOf(item.container);
     this.tweens.add({
@@ -319,7 +361,15 @@ export class ColorBasketGardenScene extends Phaser.Scene {
         item.container.setDepth(8);
         this.sparkle(targetX, targetY - 18, COLOR_HEX[item.data.color], 5);
         this.tweens.add({ targets: basket.rim, scaleX: 1.1, scaleY: 1.1, duration: 120, yoyo: true });
-        this.drawBasketShape(basket.body, basket.zone.x, basket.bodyY, basket.color, Math.min(basket.sorted * 0.08, 0.25));
+        this.drawBasketShape(
+          basket.body,
+          basket.zone.x,
+          basket.bodyY,
+          basket.color,
+          Math.min(basket.sorted * 0.08, 0.25),
+          basket.scale,
+        );
+        this.spawnNextObject(refillOrigin);
 
         if (isRoundComplete(this.sortedCount, this.totalCount)) {
           this.completeRound();
