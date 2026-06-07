@@ -102,7 +102,7 @@ jobs:
             --branch "$BRANCH_NAME" \
             | tee wrangler-output.txt
 
-          DEPLOY_URL="$(grep -Eo 'https://[^ ]+\\.pages\\.dev' wrangler-output.txt | tail -n 1)"
+          DEPLOY_URL="$(grep -Eo 'https://[^[:space:]]+\.pages\.dev' wrangler-output.txt | tail -n 1)"
           if [ -z "$DEPLOY_URL" ]; then
             echo "Could not find Cloudflare Pages preview URL in Wrangler output"
             exit 1
