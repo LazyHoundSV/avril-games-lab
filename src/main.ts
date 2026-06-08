@@ -18,6 +18,7 @@ interface GameDefinition {
     shadow: string;
   };
   icon: string;
+  previewImage?: string;
   scene: typeof Phaser.Scene;
 }
 
@@ -32,6 +33,7 @@ const games: GameDefinition[] = [
       shadow: "#7fbe63",
     },
     icon: "flower",
+    previewImage: "/assets/color-basket-garden/color_basket_garden_menu_preview.png",
     scene: ColorBasketGardenScene,
   },
 ];
@@ -72,6 +74,18 @@ const drawIcon = (icon: string): string => {
   return "";
 };
 
+const drawGameCardVisual = (game: GameDefinition): string => {
+  if (game.previewImage) {
+    return `
+      <span class="game-card__preview">
+        <img src="${game.previewImage}" alt="" loading="eager" draggable="false" />
+      </span>
+    `;
+  }
+
+  return drawIcon(game.icon);
+};
+
 const renderLanding = (): void => {
   cleanupConfetti();
   activeGame?.destroy(true);
@@ -96,7 +110,7 @@ const renderLanding = (): void => {
                 style="--card-bg: ${game.colors.background}; --card-accent: ${game.colors.accent}; --card-shadow: ${game.colors.shadow};"
                 aria-label="Open ${game.title}"
               >
-                ${drawIcon(game.icon)}
+                ${drawGameCardVisual(game)}
                 <span class="game-card__title">${game.title}</span>
                 <span class="game-card__copy">${game.description}</span>
                 <span class="game-card__action">Play</span>

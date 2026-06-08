@@ -37,6 +37,9 @@ body {
 }
 
 #app[data-screen="game"] {
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh;
   overflow: hidden;
   padding: 0;
 }
@@ -44,6 +47,7 @@ body {
 #game-root {
   width: 100vw;
   height: 100vh;
+  height: 100dvh;
   overflow: hidden;
   touch-action: none;
 }
@@ -112,8 +116,8 @@ button {
   display: grid;
   width: 100%;
   min-width: 0;
-  min-height: 310px;
-  padding: 24px;
+  min-height: 350px;
+  padding: 18px;
   cursor: pointer;
   border: 4px solid #ffffff;
   border-radius: 8px;
@@ -122,8 +126,8 @@ button {
     var(--card-bg);
   box-shadow: 0 14px 0 var(--card-shadow), 0 22px 38px rgba(35, 68, 47, 0.2);
   color: #24432f;
-  gap: 12px;
-  grid-template-rows: 1fr auto auto auto;
+  gap: 13px;
+  grid-template-rows: auto auto auto auto;
   text-align: left;
   touch-action: manipulation;
   transition:
@@ -142,6 +146,25 @@ button {
 .game-card:active {
   box-shadow: 0 4px 0 var(--card-shadow), 0 10px 20px rgba(35, 68, 47, 0.16);
   transform: translateY(10px);
+}
+
+.game-card__preview {
+  display: block;
+  width: 100%;
+  aspect-ratio: 740 / 513;
+  overflow: hidden;
+  border: 3px solid rgba(255, 255, 255, 0.92);
+  border-radius: 8px;
+  background: #bceeff;
+  box-shadow: 0 8px 0 rgba(36, 67, 47, 0.16);
+}
+
+.game-card__preview img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  user-select: none;
 }
 
 .game-card__icon {
@@ -235,7 +258,7 @@ button {
 
   .game-card {
     max-width: 358px;
-    min-height: 268px;
-    padding: 22px;
+    min-height: 300px;
+    padding: 16px;
   }
 }

@@ -38,12 +38,29 @@ const ROUND_OBJECTS: GardenObject[] = [
   { id: "purple-grapes", color: "purple", kind: "fruit", assetKey: "purple-grapes" },
 ];
 
+const SPOKEN_OBJECT_LABELS: Record<GardenAssetKey, string> = {
+  "red-flower": "red flower",
+  "red-strawberry": "red strawberry",
+  "yellow-flower": "yellow flower",
+  "yellow-lemon": "yellow lemon",
+  "blue-flower": "blue flower",
+  blueberries: "blue berries",
+  "green-leaf": "green leaf",
+  "green-apple": "green apple",
+  "purple-flower": "purple flower",
+  "purple-grapes": "purple grapes",
+};
+
 export function isCorrectBasket(object: GardenObject, basket: Basket): boolean {
   return object.color === basket.color;
 }
 
 export function createRoundObjects(): GardenObject[] {
   return ROUND_OBJECTS.map((object) => ({ ...object }));
+}
+
+export function getGardenObjectSpokenLabel(object: GardenObject): string {
+  return SPOKEN_OBJECT_LABELS[object.assetKey];
 }
 
 export function isRoundComplete(sortedCount: number, totalCount: number): boolean {

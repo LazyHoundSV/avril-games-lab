@@ -1,13 +1,21 @@
 import Phaser from "phaser";
 import {
+  computeColorBasketGardenLayout,
+  getColorBasketGardenBasketSlots,
+  getColorBasketGardenObjectPositions,
+  getColorBasketGardenReplayPosition,
+} from "./colorBasketGardenLayout";
+import {
   BASKET_COLORS,
   type BasketColor,
   type GardenAssetKey,
   type GardenObject,
   createRoundObjects,
+  getGardenObjectSpokenLabel,
   isCorrectBasket,
   isRoundComplete,
 } from "./sorting";
+import { ColorBasketGardenAudio } from "./colorBasketGardenAudio";
 
 const ASSET_BASE_PATH = "/assets/color-basket-garden";
 const GARDEN_BACKGROUND_ASSET_KEY = "garden-background";
@@ -60,13 +68,6 @@ interface DraggableItem {
   baseScale: number;
 }
 
-interface BasketSlot {
-  color: BasketColor;
-  x: number;
-  y: number;
-  scale: number;
-}
-
 const ACTIVE_OBJECT_LIMIT = 3;
 
 export class ColorBasketGardenScene extends Phaser.Scene {
@@ -78,10 +79,14 @@ export class ColorBasketGardenScene extends Phaser.Scene {
   private helper?: Phaser.GameObjects.Container;
   private celebrationLayer?: Phaser.GameObjects.Container;
   private replayButton?: Phaser.GameObjects.Container;
+  private replayHitArea?: Phaser.GameObjects.Arc;
   private stageWidth = 960;
   private stageHeight = 540;
+  private layout = computeColorBasketGardenLayout(this.stageWidth, this.stageHeight);
   private uiScale = 1;
   private itemScale = 1;
+  private replayTimer?: Phaser.Time.TimerEvent;
+  private readonly audio = new ColorBasketGardenAudio();
 
   constructor() {
     super("ColorBasketGarden");
@@ -106,6 +111,7 @@ export class ColorBasketGardenScene extends Phaser.Scene {
     this.scale.on("resize", this.startRound, this);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.scale.off("resize", this.startRound, this);
+      this.audio.cleanup();
     });
     this.startRound();
   }
@@ -113,17 +119,22 @@ export class ColorBasketGardenScene extends Phaser.Scene {
   private startRound(): void {
     this.stageWidth = this.scale.width;
     this.stageHeight = this.scale.height;
-    this.uiScale = Phaser.Math.Clamp(Math.min(this.stageWidth / 560, this.stageHeight / 700), 0.78, 1.12);
-    this.itemScale = Phaser.Math.Clamp(Math.min(this.stageWidth / 460, this.stageHeight / 650), 0.84, 1.12);
+    this.layout = computeColorBasketGardenLayout(this.stageWidth, this.stageHeight);
+    this.uiScale = this.layout.uiScale;
+    this.itemScale = this.layout.itemScale;
+    this.audio.cleanup();
+    this.replayTimer?.remove(false);
+    this.input.enabled = true;
     this.children.removeAll();
     this.baskets = [];
     this.items = [];
     this.objectQueue = [];
     this.sortedCount = 0;
+    this.helper = undefined;
     this.replayButton = undefined;
+    this.replayHitArea = undefined;
 
     this.drawGarden();
-    this.createHelper(this.stageWidth * 0.84, this.stageHeight * 0.15, 0.58 * this.uiScale);
     this.createBaskets();
     this.createObjects();
     this.celebrationLayer = this.add.container(0, 0).setDepth(70);
@@ -155,7 +166,7 @@ export class ColorBasketGardenScene extends Phaser.Scene {
   }
 
   private createBaskets(): void {
-    for (const slot of this.getBasketSlots()) {
+    for (const slot of getColorBasketGardenBasketSlots(this.layout)) {
       const shadow = this.add.ellipse(
         slot.x,
         slot.y + 48 * slot.scale,
@@ -187,38 +198,6 @@ export class ColorBasketGardenScene extends Phaser.Scene {
     }
   }
 
-  private getBasketSlots(): BasketSlot[] {
-    const isPortrait = this.stageHeight > this.stageWidth * 1.15;
-
-    if (isPortrait) {
-      const rowScale = Phaser.Math.Clamp((this.stageWidth - 40) / (3 * 124 + 36), 0.72, 0.9);
-      const lowerY = this.stageHeight * 0.83;
-      const upperY = this.stageHeight * 0.67;
-      const lowerXs = [this.stageWidth * 0.19, this.stageWidth * 0.5, this.stageWidth * 0.81];
-      const upperXs = [this.stageWidth * 0.34, this.stageWidth * 0.66];
-      const lowerColors: BasketColor[] = ["red", "yellow", "blue"];
-      const upperColors: BasketColor[] = ["green", "purple"];
-
-      return [
-        ...upperColors.map((color, index) => ({ color, x: upperXs[index], y: upperY, scale: rowScale })),
-        ...lowerColors.map((color, index) => ({ color, x: lowerXs[index], y: lowerY, scale: rowScale })),
-      ];
-    }
-
-    const availableWidth = Math.min(this.stageWidth * 0.78, this.stageWidth - 64);
-    const rowScale = Phaser.Math.Clamp(availableWidth / (BASKET_COLORS.length * 124 + 4 * 24), 0.82, 1.18);
-    const left = (this.stageWidth - availableWidth) / 2 + 62 * rowScale;
-    const right = this.stageWidth - left;
-    const y = this.stageHeight * 0.78;
-
-    return BASKET_COLORS.map((color, index) => ({
-      color,
-      x: Phaser.Math.Linear(left, right, index / (BASKET_COLORS.length - 1)),
-      y,
-      scale: rowScale,
-    }));
-  }
-
   private createObjects(): void {
     this.objectQueue = createRoundObjects();
     this.totalCount = this.objectQueue.length;
@@ -229,21 +208,9 @@ export class ColorBasketGardenScene extends Phaser.Scene {
   }
 
   private getActiveObjectPositions(): Phaser.Math.Vector2[] {
-    const isPortrait = this.stageHeight > this.stageWidth * 1.15;
-
-    if (isPortrait) {
-      return [
-        new Phaser.Math.Vector2(this.stageWidth * 0.25, this.stageHeight * 0.28),
-        new Phaser.Math.Vector2(this.stageWidth * 0.72, this.stageHeight * 0.36),
-        new Phaser.Math.Vector2(this.stageWidth * 0.5, this.stageHeight * 0.49),
-      ];
-    }
-
-    return [
-      new Phaser.Math.Vector2(this.stageWidth * 0.28, this.stageHeight * 0.33),
-      new Phaser.Math.Vector2(this.stageWidth * 0.5, this.stageHeight * 0.43),
-      new Phaser.Math.Vector2(this.stageWidth * 0.72, this.stageHeight * 0.35),
-    ];
+    return getColorBasketGardenObjectPositions(this.layout).map(
+      (position) => new Phaser.Math.Vector2(position.x, position.y),
+    );
   }
 
   private spawnNextObject(origin: Phaser.Math.Vector2): void {
@@ -275,6 +242,10 @@ export class ColorBasketGardenScene extends Phaser.Scene {
   }
 
   private registerItemDragHandlers(item: DraggableItem): void {
+    item.sprite.on("pointerdown", () => {
+      this.audio.speak(getGardenObjectSpokenLabel(item.data));
+    });
+
     item.sprite.on("dragstart", () => {
       this.tweens.killTweensOf(item.sprite);
       item.sprite.setDepth(40);
@@ -343,6 +314,7 @@ export class ColorBasketGardenScene extends Phaser.Scene {
     const refillOrigin = item.origin.clone();
     item.sprite.disableInteractive();
     this.input.setDraggable(item.sprite, false);
+    this.audio.playDropChime();
     basket.sorted += 1;
     this.sortedCount += 1;
 
@@ -396,9 +368,12 @@ export class ColorBasketGardenScene extends Phaser.Scene {
   }
 
   private completeRound(): void {
+    const { playArea } = this.layout;
+
     this.input.enabled = false;
     this.game.events.emit(COLOR_BASKET_GARDEN_LEVEL_COMPLETE_EVENT);
-    this.sparkle(this.stageWidth / 2, this.stageHeight * 0.38, 0xffffff, 18);
+    this.audio.playCompletionCelebration();
+    this.sparkle(playArea.centerX, playArea.y + playArea.height * 0.38, 0xffffff, 18);
 
     for (const basket of this.baskets) {
       this.tweens.add({
@@ -411,26 +386,41 @@ export class ColorBasketGardenScene extends Phaser.Scene {
       });
     }
 
-    if (this.helper) {
-      this.tweens.add({
-        targets: this.helper,
-        x: this.stageWidth / 2,
-        y: this.stageHeight * 0.2,
-        scale: 1.18,
-        duration: 520,
-        ease: "Back.out",
-      });
-    }
+    const helperScale = 1.08 * this.uiScale;
+    this.createHelper(playArea.centerX, playArea.centerY - 34 * this.uiScale, helperScale);
+    this.helper?.setScale(0.18);
+    this.tweens.add({
+      targets: this.helper,
+      scale: helperScale,
+      duration: 520,
+      ease: "Back.out",
+    });
 
-    this.time.delayedCall(1500, () => {
+    this.replayTimer = this.time.delayedCall(1500, () => {
       this.createReplayButton();
       this.input.enabled = true;
     });
   }
 
   private createReplayButton(): void {
+    if (this.replayButton) {
+      return;
+    }
+
+    const replayPosition = getColorBasketGardenReplayPosition(this.layout);
     const circle = this.add.circle(0, 0, 48, 0xffffff, 0.94).setStrokeStyle(6, 0x5aa85a);
     const arrow = this.add.graphics();
+    let hasReplayed = false;
+    const replay = (): void => {
+      if (hasReplayed) {
+        return;
+      }
+
+      hasReplayed = true;
+      this.replayHitArea?.disableInteractive();
+      this.startRound();
+    };
+
     arrow.lineStyle(8, 0x5aa85a, 1);
     arrow.beginPath();
     arrow.arc(0, 0, 24, Phaser.Math.DegToRad(40), Phaser.Math.DegToRad(310), false);
@@ -439,11 +429,14 @@ export class ColorBasketGardenScene extends Phaser.Scene {
     arrow.fillTriangle(22, -20, 42, -18, 30, 0);
 
     this.replayButton = this.add
-      .container(this.stageWidth / 2, this.stageHeight / 2, [circle, arrow])
+      .container(replayPosition.x, replayPosition.y, [circle, arrow])
       .setDepth(80);
-    this.replayButton.setSize(108, 108);
-    this.replayButton.setInteractive(new Phaser.Geom.Circle(0, 0, 54), Phaser.Geom.Circle.Contains);
-    this.replayButton.on("pointerdown", () => this.startRound());
+    this.replayButton.setSize(124, 124);
+    this.replayHitArea = this.add
+      .circle(replayPosition.x, replayPosition.y, 62, 0xffffff, 0.001)
+      .setDepth(81)
+      .setInteractive();
+    this.replayHitArea.on("pointerdown", replay);
   }
 
   private sparkle(x: number, y: number, color: number, count: number): void {
@@ -464,9 +457,10 @@ export class ColorBasketGardenScene extends Phaser.Scene {
   }
 
   private growProgressFlower(color: BasketColor): void {
+    const { playArea } = this.layout;
     const side = this.sortedCount % 2 === 0 ? 0.12 : 0.88;
-    const x = this.stageWidth * side + Phaser.Math.Between(-20, 20) * this.uiScale;
-    const y = this.stageHeight * Phaser.Math.FloatBetween(0.58, 0.7);
+    const x = playArea.x + playArea.width * side + Phaser.Math.Between(-20, 20) * this.uiScale;
+    const y = playArea.y + playArea.height * Phaser.Math.FloatBetween(0.58, 0.7);
     const scale = Phaser.Math.FloatBetween(0.25, 0.42) * this.uiScale;
 
     const flower = this.drawTinyFlower(x, y, 0xfff0a4, COLOR_HEX[color], scale).setDepth(8);

@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { BASKET_COLORS, createRoundObjects, isCorrectBasket, isRoundComplete } from "./sorting";
+import {
+  BASKET_COLORS,
+  createRoundObjects,
+  getGardenObjectSpokenLabel,
+  isCorrectBasket,
+  isRoundComplete,
+} from "./sorting";
 
 describe("Color Basket Garden sorting", () => {
   it("matches objects only with baskets of the same color", () => {
@@ -38,6 +44,21 @@ describe("Color Basket Garden sorting", () => {
       "green-apple",
       "purple-flower",
       "purple-grapes",
+    ]);
+  });
+
+  it("provides natural spoken labels for each garden object", () => {
+    expect(createRoundObjects().map(getGardenObjectSpokenLabel)).toEqual([
+      "red flower",
+      "red strawberry",
+      "yellow flower",
+      "yellow lemon",
+      "blue flower",
+      "blue berries",
+      "green leaf",
+      "green apple",
+      "purple flower",
+      "purple grapes",
     ]);
   });
 
