@@ -2,7 +2,20 @@ export class ColorBasketGardenAudio {
   private audioContext?: AudioContext;
   private completionSpeechTimer?: number;
 
+  prepare(): void {
+    const context = this.getAudioContext();
+
+    if (!context) {
+      return;
+    }
+
+    this.resumeContext(context);
+    this.playUnlockPulse(context);
+  }
+
   speak(phrase: string): void {
+    this.prepare();
+
     const speechSynthesis = this.getSpeechSynthesis();
     const Utterance = this.getSpeechSynthesisUtterance();
 
@@ -35,16 +48,7 @@ export class ColorBasketGardenAudio {
     this.playTone(context, 987.77, startTime + 0.08, 0.16, 0.1);
   }
 
-  playCompletionCelebration(): void {
-    const context = this.getAudioContext();
-
-    if (context) {
-      this.resumeContext(context);
-      this.playClapBurst(context);
-      this.playTone(context, 783.99, context.currentTime + 0.2, 0.16, 0.12);
-      this.playTone(context, 1046.5, context.currentTime + 0.32, 0.22, 0.1);
-    }
-
+  speakCompletionPraise(): void {
     this.clearCompletionSpeechTimer();
     this.completionSpeechTimer = window.setTimeout(() => {
       this.completionSpeechTimer = undefined;
@@ -86,6 +90,21 @@ export class ColorBasketGardenAudio {
     }
   }
 
+  private playUnlockPulse(context: AudioContext): void {
+    const startTime = context.currentTime + 0.01;
+    const oscillator = context.createOscillator();
+    const gain = context.createGain();
+
+    oscillator.type = "sine";
+    oscillator.frequency.setValueAtTime(440, startTime);
+    gain.gain.setValueAtTime(0.0001, startTime);
+    gain.gain.exponentialRampToValueAtTime(0.0001, startTime + 0.03);
+    oscillator.connect(gain);
+    gain.connect(context.destination);
+    oscillator.start(startTime);
+    oscillator.stop(startTime + 0.04);
+  }
+
   private playTone(
     context: AudioContext,
     frequency: number,
@@ -106,39 +125,6 @@ export class ColorBasketGardenAudio {
     gain.connect(context.destination);
     oscillator.start(startTime);
     oscillator.stop(startTime + duration + 0.02);
-  }
-
-  private playClapBurst(context: AudioContext): void {
-    const startTime = context.currentTime + 0.02;
-
-    for (let i = 0; i < 3; i += 1) {
-      this.playNoisePop(context, startTime + i * 0.09);
-    }
-  }
-
-  private playNoisePop(context: AudioContext, startTime: number): void {
-    const buffer = context.createBuffer(1, Math.floor(context.sampleRate * 0.045), context.sampleRate);
-    const samples = buffer.getChannelData(0);
-
-    for (let i = 0; i < samples.length; i += 1) {
-      samples[i] = (Math.random() * 2 - 1) * (1 - i / samples.length);
-    }
-
-    const source = context.createBufferSource();
-    const filter = context.createBiquadFilter();
-    const gain = context.createGain();
-
-    source.buffer = buffer;
-    filter.type = "highpass";
-    filter.frequency.setValueAtTime(900, startTime);
-    gain.gain.setValueAtTime(0.0001, startTime);
-    gain.gain.exponentialRampToValueAtTime(0.18, startTime + 0.006);
-    gain.gain.exponentialRampToValueAtTime(0.0001, startTime + 0.05);
-
-    source.connect(filter);
-    filter.connect(gain);
-    gain.connect(context.destination);
-    source.start(startTime);
   }
 
   private getSpeechSynthesis(): SpeechSynthesis | undefined {

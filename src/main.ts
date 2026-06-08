@@ -44,6 +44,8 @@ let confettiRoot: Root | undefined;
 let clearConfettiTimer: number | undefined;
 
 const CONFETTI_COLORS = ["#e9544f", "#f4c84f", "#2f8de8", "#63bd34", "#9a58e8", "#ffffff"];
+const BRAND_LOGO_PATH = "/assets/brand/avril-games-lab-logo.png";
+const HOME_ICON_PATH = "/assets/color-basket-garden/home_icon_hq_248.png";
 
 if (!app) {
   throw new Error("Missing #app root");
@@ -54,6 +56,14 @@ const getRequestedGame = (): GameDefinition | undefined => {
   const gameId = params.get("game");
 
   return games.find((game) => game.id === gameId);
+};
+
+const enterFullscreen = (): void => {
+  if (document.fullscreenElement || !document.fullscreenEnabled || !document.documentElement.requestFullscreen) {
+    return;
+  }
+
+  void document.documentElement.requestFullscreen().catch(() => undefined);
 };
 
 const drawIcon = (icon: string): string => {
@@ -95,9 +105,14 @@ const renderLanding = (): void => {
   app.innerHTML = `
     <section class="landing-shell" aria-labelledby="landing-title">
       <div class="landing-header">
+        <img
+          class="landing-logo"
+          src="${BRAND_LOGO_PATH}"
+          alt="Avril Games Lab logo"
+          draggable="false"
+        />
         <p class="landing-kicker">Avril Games Lab</p>
         <h1 id="landing-title">Juegos para Avril</h1>
-        <p class="landing-copy">Un menú simple para entrar a los juegos aprobados y construidos.</p>
       </div>
       <div class="games-grid" aria-label="Available games">
         ${games
@@ -128,6 +143,7 @@ const renderLanding = (): void => {
       const nextGame = games.find((game) => game.id === gameId);
 
       if (nextGame) {
+        enterFullscreen();
         window.history.pushState({}, "", `?game=${nextGame.id}`);
         startGame(nextGame);
       }
@@ -142,8 +158,7 @@ const startGame = (gameDefinition: GameDefinition): void => {
   app.dataset.screen = "game";
   app.innerHTML = `
     <button class="menu-button" type="button" aria-label="Back to games menu">
-      <span aria-hidden="true">←</span>
-      Menu
+      <img src="${HOME_ICON_PATH}" alt="" aria-hidden="true" draggable="false" />
     </button>
     <div id="game-root"></div>
     <div id="confetti-root" aria-hidden="true"></div>

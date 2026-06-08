@@ -3,7 +3,6 @@ import {
   computeColorBasketGardenLayout,
   getColorBasketGardenBasketSlots,
   getColorBasketGardenObjectPositions,
-  getColorBasketGardenReplayPosition,
 } from "./colorBasketGardenLayout";
 import {
   BASKET_COLORS,
@@ -18,7 +17,17 @@ import {
 import { ColorBasketGardenAudio } from "./colorBasketGardenAudio";
 
 const ASSET_BASE_PATH = "/assets/color-basket-garden";
+const COMPLETION_APPLAUSE_ASSET_KEY = "applause-complete";
+const COMPLETION_APPLAUSE_ASSET_FILES = [
+  `${ASSET_BASE_PATH}/audio/applause-complete-chosic-3s.ogg`,
+  `${ASSET_BASE_PATH}/audio/applause-complete-chosic-3s.mp3`,
+];
 const GARDEN_BACKGROUND_ASSET_KEY = "garden-background";
+const REPLAY_BUTTON_ASSET_KEY = "replay-button";
+const REPLAY_BUTTON_ASSET_FILE = "replay_icon_hq_248.png";
+const MIN_NAV_BUTTON_SIZE = 58;
+const MAX_NAV_BUTTON_SIZE = 74;
+const NAV_BUTTON_INSET = 12;
 
 const COLOR_HEX: Record<BasketColor, number> = {
   red: 0xe9544f,
@@ -78,8 +87,9 @@ export class ColorBasketGardenScene extends Phaser.Scene {
   private totalCount = 0;
   private helper?: Phaser.GameObjects.Container;
   private celebrationLayer?: Phaser.GameObjects.Container;
-  private replayButton?: Phaser.GameObjects.Container;
+  private replayButton?: Phaser.GameObjects.Image;
   private replayHitArea?: Phaser.GameObjects.Arc;
+  private replayPulse?: Phaser.Tweens.Tween;
   private stageWidth = 960;
   private stageHeight = 540;
   private layout = computeColorBasketGardenLayout(this.stageWidth, this.stageHeight);
@@ -95,6 +105,8 @@ export class ColorBasketGardenScene extends Phaser.Scene {
   preload(): void {
     this.load.image(GARDEN_BACKGROUND_ASSET_KEY, `${ASSET_BASE_PATH}/garden_background.png`);
     this.load.image(HELPER_ASSET_KEY, `${ASSET_BASE_PATH}/kitty_helper.png`);
+    this.load.image(REPLAY_BUTTON_ASSET_KEY, `${ASSET_BASE_PATH}/${REPLAY_BUTTON_ASSET_FILE}`);
+    this.load.audio(COMPLETION_APPLAUSE_ASSET_KEY, COMPLETION_APPLAUSE_ASSET_FILES);
 
     for (const [color, file] of Object.entries(BASKET_ASSET_FILES) as [BasketColor, string][]) {
       this.load.image(this.getBasketAssetKey(color), `${ASSET_BASE_PATH}/${file}`);
@@ -124,6 +136,7 @@ export class ColorBasketGardenScene extends Phaser.Scene {
     this.itemScale = this.layout.itemScale;
     this.audio.cleanup();
     this.replayTimer?.remove(false);
+    this.replayPulse?.stop();
     this.input.enabled = true;
     this.children.removeAll();
     this.baskets = [];
@@ -133,6 +146,7 @@ export class ColorBasketGardenScene extends Phaser.Scene {
     this.helper = undefined;
     this.replayButton = undefined;
     this.replayHitArea = undefined;
+    this.replayPulse = undefined;
 
     this.drawGarden();
     this.createBaskets();
@@ -243,6 +257,7 @@ export class ColorBasketGardenScene extends Phaser.Scene {
 
   private registerItemDragHandlers(item: DraggableItem): void {
     item.sprite.on("pointerdown", () => {
+      this.audio.prepare();
       this.audio.speak(getGardenObjectSpokenLabel(item.data));
     });
 
@@ -372,7 +387,8 @@ export class ColorBasketGardenScene extends Phaser.Scene {
 
     this.input.enabled = false;
     this.game.events.emit(COLOR_BASKET_GARDEN_LEVEL_COMPLETE_EVENT);
-    this.audio.playCompletionCelebration();
+    this.sound.play(COMPLETION_APPLAUSE_ASSET_KEY, { volume: 0.75 });
+    this.audio.speakCompletionPraise();
     this.sparkle(playArea.centerX, playArea.y + playArea.height * 0.38, 0xffffff, 18);
 
     for (const basket of this.baskets) {
@@ -407,9 +423,8 @@ export class ColorBasketGardenScene extends Phaser.Scene {
       return;
     }
 
-    const replayPosition = getColorBasketGardenReplayPosition(this.layout);
-    const circle = this.add.circle(0, 0, 48, 0xffffff, 0.94).setStrokeStyle(6, 0x5aa85a);
-    const arrow = this.add.graphics();
+    const replayButtonSize = this.getNavButtonSize();
+    const replayPosition = this.getReplayButtonPosition(replayButtonSize);
     let hasReplayed = false;
     const replay = (): void => {
       if (hasReplayed) {
@@ -417,26 +432,41 @@ export class ColorBasketGardenScene extends Phaser.Scene {
       }
 
       hasReplayed = true;
+      this.replayPulse?.stop();
+      this.replayPulse = undefined;
       this.replayHitArea?.disableInteractive();
       this.startRound();
     };
 
-    arrow.lineStyle(8, 0x5aa85a, 1);
-    arrow.beginPath();
-    arrow.arc(0, 0, 24, Phaser.Math.DegToRad(40), Phaser.Math.DegToRad(310), false);
-    arrow.strokePath();
-    arrow.fillStyle(0x5aa85a, 1);
-    arrow.fillTriangle(22, -20, 42, -18, 30, 0);
-
     this.replayButton = this.add
-      .container(replayPosition.x, replayPosition.y, [circle, arrow])
+      .image(replayPosition.x, replayPosition.y, REPLAY_BUTTON_ASSET_KEY)
+      .setDisplaySize(replayButtonSize, replayButtonSize)
       .setDepth(80);
-    this.replayButton.setSize(124, 124);
+    this.replayPulse = this.tweens.add({
+      targets: this.replayButton,
+      scaleX: this.replayButton.scaleX * 1.16,
+      scaleY: this.replayButton.scaleY * 1.16,
+      duration: 460,
+      yoyo: true,
+      repeat: -1,
+      ease: "Sine.inOut",
+    });
     this.replayHitArea = this.add
-      .circle(replayPosition.x, replayPosition.y, 62, 0xffffff, 0.001)
+      .circle(replayPosition.x, replayPosition.y, replayButtonSize / 2, 0xffffff, 0.001)
       .setDepth(81)
       .setInteractive();
     this.replayHitArea.on("pointerdown", replay);
+  }
+
+  private getNavButtonSize(): number {
+    return Phaser.Math.Clamp(this.stageWidth * 0.1, MIN_NAV_BUTTON_SIZE, MAX_NAV_BUTTON_SIZE);
+  }
+
+  private getReplayButtonPosition(buttonSize: number): Phaser.Math.Vector2 {
+    return new Phaser.Math.Vector2(
+      this.stageWidth - NAV_BUTTON_INSET - buttonSize / 2,
+      NAV_BUTTON_INSET + buttonSize / 2,
+    );
   }
 
   private sparkle(x: number, y: number, color: number, count: number): void {
