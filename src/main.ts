@@ -58,14 +58,6 @@ const getRequestedGame = (): GameDefinition | undefined => {
   return games.find((game) => game.id === gameId);
 };
 
-const enterFullscreen = (): void => {
-  if (document.fullscreenElement || !document.fullscreenEnabled || !document.documentElement.requestFullscreen) {
-    return;
-  }
-
-  void document.documentElement.requestFullscreen().catch(() => undefined);
-};
-
 const drawIcon = (icon: string): string => {
   if (icon === "flower") {
     return `
@@ -143,7 +135,6 @@ const renderLanding = (): void => {
       const nextGame = games.find((game) => game.id === gameId);
 
       if (nextGame) {
-        enterFullscreen();
         window.history.pushState({}, "", `?game=${nextGame.id}`);
         startGame(nextGame);
       }
