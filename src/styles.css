@@ -1,0 +1,333 @@
+:root {
+  color: #f7fbff;
+  background: #070714;
+  font-family:
+    Inter, ui-rounded, "SF Pro Rounded", system-ui, -apple-system, BlinkMacSystemFont,
+    "Segoe UI", sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+  width: 100%;
+  min-width: 320px;
+  height: 100%;
+  min-height: 100%;
+  margin: 0;
+}
+
+body {
+  position: relative;
+  display: grid;
+  place-items: center;
+  background: #070714;
+  overflow-x: hidden;
+}
+
+body::before,
+body::after {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  content: "";
+}
+
+body::before {
+  background:
+    linear-gradient(135deg, rgba(17, 246, 255, 0.11) 0 1px, transparent 1px 100%),
+    linear-gradient(45deg, rgba(236, 70, 255, 0.1) 0 1px, transparent 1px 100%),
+    linear-gradient(180deg, #02030a 0%, #070714 42%, #120528 100%);
+  background-size:
+    84px 84px,
+    108px 108px,
+    auto;
+}
+
+body::after {
+  background:
+    radial-gradient(ellipse at center top, rgba(16, 234, 244, 0.24), transparent 44%),
+    radial-gradient(ellipse at center bottom, rgba(178, 44, 255, 0.26), transparent 48%);
+  mix-blend-mode: screen;
+}
+
+#app {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  overflow: auto;
+  padding: clamp(20px, 4vw, 44px);
+}
+
+#app[data-screen="game"] {
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+  padding: 0;
+}
+
+#game-root {
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+  touch-action: none;
+}
+
+#confetti-root {
+  position: fixed;
+  z-index: 30;
+  inset: 0;
+  pointer-events: none;
+}
+
+canvas {
+  display: block;
+}
+
+button {
+  font: inherit;
+}
+
+.landing-shell {
+  width: min(1080px, 100%);
+  min-width: 0;
+}
+
+.landing-header {
+  display: grid;
+  justify-items: center;
+  margin: 0 auto 26px;
+  max-width: 720px;
+  gap: 10px;
+  text-align: center;
+}
+
+.landing-logo {
+  display: block;
+  width: min(260px, 68vw);
+  height: auto;
+  object-fit: contain;
+  filter:
+    drop-shadow(0 0 18px rgba(24, 243, 255, 0.48))
+    drop-shadow(0 20px 38px rgba(130, 58, 255, 0.36));
+  user-select: none;
+}
+
+.landing-kicker {
+  margin: 0;
+  color: #92fbff;
+  font-size: 0.9rem;
+  font-weight: 800;
+  letter-spacing: 0;
+  line-height: 1;
+  text-shadow: 0 0 18px rgba(17, 246, 255, 0.64);
+  text-transform: uppercase;
+}
+
+.landing-header h1 {
+  margin: 0;
+  color: #ffffff;
+  font-size: 3.5rem;
+  line-height: 0.98;
+  overflow-wrap: anywhere;
+  text-shadow:
+    0 0 12px rgba(255, 255, 255, 0.38),
+    0 0 30px rgba(225, 52, 255, 0.52),
+    0 0 54px rgba(17, 246, 255, 0.3);
+  white-space: normal;
+}
+
+.games-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 250px), 1fr));
+  gap: 24px;
+}
+
+.game-card {
+  position: relative;
+  display: grid;
+  width: 100%;
+  max-width: 460px;
+  min-width: 0;
+  min-height: 350px;
+  padding: 18px;
+  justify-self: center;
+  cursor: pointer;
+  border: 2px solid rgba(147, 250, 255, 0.76);
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.08), transparent 44%),
+    linear-gradient(135deg, rgba(17, 246, 255, 0.18), rgba(236, 70, 255, 0.16)),
+    #0b0d22;
+  box-shadow:
+    0 12px 0 rgba(75, 17, 143, 0.84),
+    0 0 0 1px rgba(255, 255, 255, 0.18) inset,
+    0 24px 46px rgba(1, 2, 9, 0.52),
+    0 0 38px rgba(88, 44, 255, 0.28);
+  color: #f7fbff;
+  gap: 13px;
+  grid-template-rows: auto auto auto auto;
+  text-align: left;
+  touch-action: manipulation;
+  transition:
+    transform 150ms ease,
+    box-shadow 150ms ease;
+}
+
+.game-card:hover,
+.game-card:focus-visible {
+  box-shadow:
+    0 8px 0 rgba(75, 17, 143, 0.84),
+    0 0 0 1px rgba(255, 255, 255, 0.24) inset,
+    0 22px 40px rgba(1, 2, 9, 0.5),
+    0 0 48px rgba(17, 246, 255, 0.34);
+  outline: 3px solid rgba(146, 251, 255, 0.92);
+  outline-offset: 3px;
+  transform: translateY(4px);
+}
+
+.game-card:active {
+  box-shadow:
+    0 3px 0 rgba(75, 17, 143, 0.84),
+    0 12px 24px rgba(1, 2, 9, 0.48),
+    0 0 28px rgba(236, 70, 255, 0.3);
+  transform: translateY(10px);
+}
+
+.game-card__preview {
+  display: block;
+  width: 100%;
+  aspect-ratio: 740 / 513;
+  overflow: hidden;
+  border: 2px solid rgba(255, 255, 255, 0.86);
+  border-radius: 8px;
+  background: #11152e;
+  box-shadow:
+    0 8px 0 rgba(1, 2, 9, 0.32),
+    0 0 24px rgba(17, 246, 255, 0.18);
+}
+
+.game-card__preview img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  user-select: none;
+}
+
+.game-card__icon {
+  align-self: center;
+  justify-self: center;
+  width: min(48vw, 150px);
+  height: min(48vw, 150px);
+  filter: drop-shadow(0 8px 0 rgba(1, 2, 9, 0.36));
+}
+
+.game-card__title {
+  display: block;
+  width: 100%;
+  color: #ffffff;
+  font-size: 1.9rem;
+  font-weight: 900;
+  line-height: 1;
+  overflow-wrap: anywhere;
+  text-shadow: 0 0 18px rgba(17, 246, 255, 0.34);
+  white-space: normal;
+}
+
+.game-card__copy {
+  display: block;
+  width: 100%;
+  color: #cfd7ff;
+  font-size: 1rem;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+.game-card__action {
+  display: inline-grid;
+  width: fit-content;
+  min-width: 92px;
+  min-height: 46px;
+  place-items: center;
+  padding: 0 20px;
+  border: 1px solid rgba(255, 255, 255, 0.48);
+  border-radius: 8px;
+  background: linear-gradient(135deg, #14e8f5, #e34fff);
+  color: #ffffff;
+  font-size: 1rem;
+  font-weight: 900;
+  box-shadow:
+    inset 0 -4px 0 rgba(1, 2, 9, 0.24),
+    0 0 18px rgba(227, 79, 255, 0.28);
+  text-shadow: 0 1px 0 rgba(1, 2, 9, 0.34);
+}
+
+.menu-button {
+  position: fixed;
+  z-index: 20;
+  top: max(12px, env(safe-area-inset-top));
+  left: max(12px, env(safe-area-inset-left));
+  display: block;
+  width: clamp(58px, 10vw, 74px);
+  height: clamp(58px, 10vw, 74px);
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  box-shadow: none;
+  cursor: pointer;
+  line-height: 0;
+  touch-action: manipulation;
+}
+
+.menu-button img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  user-select: none;
+}
+
+.menu-button:focus-visible {
+  outline: 4px solid #fff6c7;
+  outline-offset: 3px;
+}
+
+@media (max-width: 560px) {
+  #app {
+    align-items: start;
+    justify-items: stretch;
+    padding: 22px 16px 28px;
+  }
+
+  .landing-shell {
+    width: 100%;
+    max-width: 358px;
+  }
+
+  .landing-header {
+    margin-bottom: 24px;
+    text-align: center;
+  }
+
+  .landing-logo {
+    width: min(220px, 74vw);
+  }
+
+  .landing-header h1 {
+    font-size: 2.55rem;
+  }
+
+  .game-card {
+    max-width: 358px;
+    min-height: 300px;
+    padding: 16px;
+  }
+}

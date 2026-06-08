@@ -3,7 +3,6 @@ name: Cloudflare Pages Preview
 on:
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review]
-  workflow_dispatch:
 
 permissions:
   contents: read
@@ -74,8 +73,7 @@ jobs:
     runs-on: ubuntu-latest
     if: >-
       needs.build.outputs.has-app == 'true' &&
-      (github.event_name == 'workflow_dispatch' ||
-      github.event.pull_request.head.repo.full_name == github.repository)
+      github.event.pull_request.head.repo.full_name == github.repository
     env:
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -96,7 +94,7 @@ jobs:
       - name: Deploy to Cloudflare Pages
         id: deploy
         run: |
-          BRANCH_NAME="${GITHUB_HEAD_REF:-$GITHUB_REF_NAME}"
+          BRANCH_NAME="$GITHUB_HEAD_REF"
           npx wrangler@4 pages deploy dist \
             --project-name "$CLOUDFLARE_PROJECT_NAME" \
             --branch "$BRANCH_NAME" \
