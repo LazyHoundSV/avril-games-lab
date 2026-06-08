@@ -17,29 +17,51 @@ jobs:
   build:
     name: Build and test
     runs-on: ubuntu-latest
+    outputs:
+      has-app: ${{ steps.detect.outputs.has-app }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Detect app
+        id: detect
+        run: |
+          if [ -f package.json ]; then
+            echo "has-app=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has-app=false" >> "$GITHUB_OUTPUT"
+            echo "No package.json found; skipping Cloudflare Pages preview until the app exists on this branch."
+          fi
+
       - name: Setup Node
+        if: steps.detect.outputs.has-app == 'true'
         uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: npm
 
       - name: Install dependencies
-        run: npm ci
+        if: steps.detect.outputs.has-app == 'true'
+        run: |
+          if [ -f package-lock.json ]; then
+            npm ci
+          else
+            npm install
+          fi
 
       - name: Typecheck
+        if: steps.detect.outputs.has-app == 'true'
         run: npm run typecheck
 
       - name: Test
+        if: steps.detect.outputs.has-app == 'true'
         run: npm run test
 
       - name: Build
+        if: steps.detect.outputs.has-app == 'true'
         run: npm run build
 
       - name: Upload build artifact
+        if: steps.detect.outputs.has-app == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: dist
@@ -51,8 +73,9 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     if: >-
-      github.event_name == 'workflow_dispatch' ||
-      github.event.pull_request.head.repo.full_name == github.repository
+      needs.build.outputs.has-app == 'true' &&
+      (github.event_name == 'workflow_dispatch' ||
+      github.event.pull_request.head.repo.full_name == github.repository)
     env:
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
