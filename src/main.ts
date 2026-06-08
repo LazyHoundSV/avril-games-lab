@@ -7,6 +7,10 @@ import {
   COLOR_BASKET_GARDEN_LEVEL_COMPLETE_EVENT,
   ColorBasketGardenScene,
 } from "./game/ColorBasketGardenScene";
+import {
+  KITTY_ROOM_BUILDER_LEVEL_COMPLETE_EVENT,
+  KittyRoomBuilderScene,
+} from "./game/KittyRoomBuilderScene";
 
 interface GameDefinition {
   id: string;
@@ -20,6 +24,7 @@ interface GameDefinition {
   icon: string;
   previewImage?: string;
   scene: typeof Phaser.Scene;
+  completeEvent: string;
 }
 
 const games: GameDefinition[] = [
@@ -35,6 +40,21 @@ const games: GameDefinition[] = [
     icon: "flower",
     previewImage: "/assets/color-basket-garden/color_basket_garden_menu_preview.png",
     scene: ColorBasketGardenScene,
+    completeEvent: COLOR_BASKET_GARDEN_LEVEL_COMPLETE_EVENT,
+  },
+  {
+    id: "kitty-room-builder",
+    title: "Kitty Room Builder",
+    description: "Place cozy room pieces into matching shapes.",
+    colors: {
+      background: "#ffd9c8",
+      accent: "#b98be8",
+      shadow: "#d99b62",
+    },
+    icon: "room",
+    previewImage: "/assets/kitty-room-builder/menu_preview.svg",
+    scene: KittyRoomBuilderScene,
+    completeEvent: KITTY_ROOM_BUILDER_LEVEL_COMPLETE_EVENT,
   },
 ];
 
@@ -184,7 +204,7 @@ const startGame = (gameDefinition: GameDefinition): void => {
 
   if (confettiRootElement) {
     confettiRoot = createRoot(confettiRootElement);
-    activeGame.events.on(COLOR_BASKET_GARDEN_LEVEL_COMPLETE_EVENT, showLevelCompleteConfetti);
+    activeGame.events.on(gameDefinition.completeEvent, showLevelCompleteConfetti);
   }
 };
 
