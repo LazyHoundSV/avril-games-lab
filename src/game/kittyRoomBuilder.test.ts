@@ -3,7 +3,7 @@ import { createRoomObjects, isCorrectRoomTarget, isRoomComplete } from "./kittyR
 
 describe("Kitty Room Builder rules", () => {
   it("creates the five required room objects", () => {
-    expect(createRoomObjects().map((object) => object.id)).toEqual(["window", "bed", "rug", "ball", "bowl"]);
+    expect(createRoomObjects().map((object) => object.id)).toEqual(["window", "bed", "rug", "bowl", "yarn"]);
   });
 
   it("matches objects only to their own silhouette target", () => {

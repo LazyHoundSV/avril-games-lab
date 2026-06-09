@@ -52,7 +52,7 @@ const games: GameDefinition[] = [
       shadow: "#d99b62",
     },
     icon: "room",
-    previewImage: "/assets/kitty-room-builder/menu_preview.svg",
+    previewImage: "/assets/kitty-room-builder/menu-preview.png",
     scene: KittyRoomBuilderScene,
     completeEvent: KITTY_ROOM_BUILDER_LEVEL_COMPLETE_EVENT,
   },

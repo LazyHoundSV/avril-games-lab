@@ -6,6 +6,7 @@ import {
   type RoomObject,
   type RoomObjectKind,
 } from "./kittyRoomBuilder";
+import { ColorBasketGardenAudio } from "./colorBasketGardenAudio";
 import {
   computeKittyRoomBuilderLayout,
   getKittyRoomObjectTrayPositions,
@@ -15,9 +16,20 @@ import {
 } from "./kittyRoomBuilderLayout";
 
 const COLOR_BASKET_ASSET_BASE_PATH = "/assets/color-basket-garden";
+const KITTY_ROOM_ASSET_BASE_PATH = "/assets/kitty-room-builder";
+const COMPLETION_APPLAUSE_ASSET_KEY = "kitty-room-applause-complete";
+const COMPLETION_APPLAUSE_ASSET_FILES = [
+  `${COLOR_BASKET_ASSET_BASE_PATH}/audio/applause-complete-chosic-3s.ogg`,
+  `${COLOR_BASKET_ASSET_BASE_PATH}/audio/applause-complete-chosic-3s.mp3`,
+];
 const REPLAY_BUTTON_ASSET_KEY = "kitty-room-replay-button";
 const REPLAY_BUTTON_ASSET_FILE = "replay_icon_hq_248.png";
+const LANDSCAPE_BACKDROP_ASSET_KEY = "kitty-room-backdrop-landscape";
+const PORTRAIT_BACKDROP_ASSET_KEY = "kitty-room-backdrop-portrait";
+const HAPPY_KITTEN_ASSET_KEY = "kitty-room-happy-kitten";
 const ACTIVE_OBJECT_LIMIT = 3;
+const MIN_NAV_BUTTON_SIZE = 58;
+const MAX_NAV_BUTTON_SIZE = 74;
 
 export const KITTY_ROOM_BUILDER_LEVEL_COMPLETE_EVENT = "kitty-room-builder:level-complete";
 
@@ -27,6 +39,8 @@ interface RoomTargetState {
   silhouette: Phaser.GameObjects.Image;
   glow: Phaser.GameObjects.Ellipse;
   scale: number;
+  width: number;
+  height: number;
 }
 
 interface DraggableRoomItem {
@@ -37,11 +51,11 @@ interface DraggableRoomItem {
 }
 
 const OBJECT_SIZE: Record<RoomObjectKind, { width: number; height: number }> = {
-  window: { width: 124, height: 124 },
-  bed: { width: 190, height: 128 },
-  rug: { width: 184, height: 116 },
-  ball: { width: 118, height: 118 },
-  bowl: { width: 138, height: 98 },
+  window: { width: 376, height: 367 },
+  bed: { width: 416, height: 343 },
+  rug: { width: 413, height: 228 },
+  bowl: { width: 283, height: 204 },
+  yarn: { width: 318, height: 251 },
 };
 
 export class KittyRoomBuilderScene extends Phaser.Scene {
@@ -54,28 +68,39 @@ export class KittyRoomBuilderScene extends Phaser.Scene {
   private replayButton?: Phaser.GameObjects.Image;
   private replayPulse?: Phaser.Tweens.Tween;
   private replayTimer?: Phaser.Time.TimerEvent;
+  private readonly audio = new ColorBasketGardenAudio();
 
   constructor() {
     super("KittyRoomBuilder");
   }
 
   preload(): void {
+    this.load.audio(COMPLETION_APPLAUSE_ASSET_KEY, COMPLETION_APPLAUSE_ASSET_FILES);
     this.load.image(REPLAY_BUTTON_ASSET_KEY, `${COLOR_BASKET_ASSET_BASE_PATH}/${REPLAY_BUTTON_ASSET_FILE}`);
+    this.load.image(LANDSCAPE_BACKDROP_ASSET_KEY, `${KITTY_ROOM_ASSET_BASE_PATH}/room-backdrop-landscape.png`);
+    this.load.image(PORTRAIT_BACKDROP_ASSET_KEY, `${KITTY_ROOM_ASSET_BASE_PATH}/room-backdrop-portrait.png`);
+    this.load.image(HAPPY_KITTEN_ASSET_KEY, `${KITTY_ROOM_ASSET_BASE_PATH}/happy-kitten.png`);
+
+    for (const object of createRoomObjects()) {
+      this.load.image(object.textureKey, `${KITTY_ROOM_ASSET_BASE_PATH}/${object.id}.png`);
+      this.load.image(object.silhouetteKey, `${KITTY_ROOM_ASSET_BASE_PATH}/${object.id}-target.png`);
+    }
   }
 
   create(): void {
     this.input.dragDistanceThreshold = 4;
     this.input.topOnly = false;
-    this.createGeneratedTextures();
     this.scale.on("resize", this.startRound, this);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.scale.off("resize", this.startRound, this);
+      this.audio.cleanup();
     });
     this.startRound();
   }
 
   private startRound(): void {
     this.layout = computeKittyRoomBuilderLayout(this.scale.width, this.scale.height);
+    this.audio.cleanup();
     this.replayTimer?.remove(false);
     this.replayPulse?.stop();
     this.input.enabled = true;
@@ -95,43 +120,64 @@ export class KittyRoomBuilderScene extends Phaser.Scene {
   private drawRoom(): void {
     const { playArea } = this.layout;
     const graphics = this.add.graphics();
-    const wallBottom = playArea.y + playArea.height * (this.layout.isPortrait ? 0.47 : 0.5);
-    const floorTop = wallBottom;
+    const backdropKey = this.layout.isPortrait ? PORTRAIT_BACKDROP_ASSET_KEY : LANDSCAPE_BACKDROP_ASSET_KEY;
+    this.add
+      .image(playArea.centerX, playArea.centerY, backdropKey)
+      .setDisplaySize(playArea.width, playArea.height)
+      .setDepth(0);
 
-    graphics.fillGradientStyle(0xffe2d2, 0xffe2d2, 0xffc9b0, 0xffc9b0, 1);
-    graphics.fillRect(playArea.x, playArea.y, playArea.width, wallBottom - playArea.y);
-    graphics.fillGradientStyle(0xdba66c, 0xdba66c, 0xb97744, 0xb97744, 1);
-    graphics.fillRect(playArea.x, floorTop, playArea.width, playArea.height - floorTop);
-    graphics.lineStyle(6 * this.layout.uiScale, 0x9d6c4a, 0.45);
-    graphics.lineBetween(playArea.x, wallBottom, playArea.x + playArea.width, wallBottom);
+    const titleWidth = this.layout.isPortrait
+      ? Phaser.Math.Clamp(playArea.width - 128, 224, 268)
+      : Phaser.Math.Clamp(playArea.width * 0.38, 286, 420);
+    const titleHeight = Phaser.Math.Clamp(playArea.height * (this.layout.isPortrait ? 0.09 : 0.105), 52, 76);
+    const titleX = this.layout.isPortrait ? playArea.x + 78 + titleWidth / 2 : playArea.centerX;
+    const titleY = playArea.y + titleHeight * 0.72;
+    graphics.fillStyle(0x7431c5, 0.93);
+    graphics.fillRoundedRect(titleX - titleWidth / 2, titleY - titleHeight / 2, titleWidth, titleHeight, 24);
+    graphics.lineStyle(3 * this.layout.uiScale, 0x4a1f94, 0.36);
+    graphics.strokeRoundedRect(titleX - titleWidth / 2, titleY - titleHeight / 2, titleWidth, titleHeight, 24);
+    this.add
+      .text(titleX, titleY, "Kitty Room Builder", {
+        color: "#ffffff",
+        fontFamily: "Arial Rounded MT Bold, Trebuchet MS, sans-serif",
+        fontSize: `${Math.round((this.layout.isPortrait ? 23 : 32) * this.layout.uiScale)}px`,
+        fontStyle: "bold",
+        stroke: "#5b2ca5",
+        strokeThickness: this.layout.isPortrait ? 3 : 4,
+      })
+      .setOrigin(0.5)
+      .setDepth(21);
 
-    for (let index = 0; index < 5; index += 1) {
-      const y = floorTop + (index + 1) * 34 * this.layout.uiScale;
-      graphics.lineStyle(2 * this.layout.uiScale, 0xb77b4f, 0.16);
-      graphics.lineBetween(playArea.x, y, playArea.x + playArea.width, y + 22 * this.layout.uiScale);
-    }
-
-    this.createPeekingKitten(playArea.x + playArea.width * 0.08, wallBottom - 32 * this.layout.uiScale, 0.68);
+    const trayInset = 22 * this.layout.uiScale;
+    const trayHeight = (this.layout.isPortrait ? 138 : 128) * this.layout.objectScale;
+    const trayY = playArea.y + playArea.height - trayHeight - 12 * this.layout.uiScale;
+    graphics.fillStyle(0xfff7ec, 0.94);
+    graphics.lineStyle(2 * this.layout.uiScale, 0xb67b4f, 0.34);
+    graphics.fillRoundedRect(playArea.x + trayInset, trayY, playArea.width - trayInset * 2, trayHeight, 20 * this.layout.uiScale);
+    graphics.strokeRoundedRect(playArea.x + trayInset, trayY, playArea.width - trayInset * 2, trayHeight, 20 * this.layout.uiScale);
+    graphics.setDepth(19);
   }
 
   private createTargets(): void {
     for (const slot of getKittyRoomTargetSlots(this.layout)) {
+      const targetWidth = slot.width * slot.scale;
+      const targetHeight = slot.height * slot.scale;
       const glow = this.add
-        .ellipse(slot.x, slot.y, slot.width * slot.scale * 1.12, slot.height * slot.scale * 1.12, 0xfff5b8, 0)
+        .ellipse(slot.x, slot.y, targetWidth * 1.16, targetHeight * 1.16, 0xfff5b8, 0)
         .setDepth(7);
       const silhouette = this.add
-        .image(slot.x, slot.y, `${slot.id}-silhouette`)
-        .setScale(slot.scale)
+        .image(slot.x, slot.y, this.getTargetTextureKey(slot.id))
+        .setDisplaySize(targetWidth, targetHeight)
         .setDepth(8)
-        .setAlpha(0.58);
-      const zoneWidth = Math.max(104, slot.width * slot.scale + 28);
-      const zoneHeight = Math.max(104, slot.height * slot.scale + 28);
+        .setAlpha(1);
+      const zoneWidth = Math.max(104, targetWidth + 28);
+      const zoneHeight = Math.max(104, targetHeight + 28);
       const zone = this.add.zone(slot.x, slot.y, zoneWidth, zoneHeight).setRectangleDropZone(zoneWidth, zoneHeight);
 
-      this.targets.push({ id: slot.id, zone, silhouette, glow, scale: slot.scale });
+      this.targets.push({ id: slot.id, zone, silhouette, glow, scale: slot.scale, width: targetWidth, height: targetHeight });
       this.tweens.add({
         targets: silhouette,
-        alpha: 0.7,
+        alpha: 0.86,
         duration: 1800,
         yoyo: true,
         repeat: -1,
@@ -183,6 +229,11 @@ export class KittyRoomBuilderScene extends Phaser.Scene {
   }
 
   private registerItemDragHandlers(item: DraggableRoomItem): void {
+    item.sprite.on("pointerdown", () => {
+      this.audio.prepare();
+      this.audio.speak(item.data.label);
+    });
+
     item.sprite.on("dragstart", () => {
       this.tweens.killTweensOf(item.sprite);
       item.sprite.setDepth(42);
@@ -237,8 +288,8 @@ export class KittyRoomBuilderScene extends Phaser.Scene {
     for (const target of this.targets) {
       const isActive = target === active;
       target.glow.setAlpha(isActive ? 0.45 : 0);
-      target.silhouette.setAlpha(isActive ? 0.86 : 0.58);
-      target.silhouette.setScale(target.scale * (isActive ? 1.04 : 1));
+      target.silhouette.setAlpha(isActive ? 1 : 0.92);
+      target.silhouette.setDisplaySize(target.width * (isActive ? 1.04 : 1), target.height * (isActive ? 1.04 : 1));
     }
   }
 
@@ -246,6 +297,7 @@ export class KittyRoomBuilderScene extends Phaser.Scene {
     const refillOrigin = item.origin.clone();
     item.sprite.disableInteractive();
     this.input.setDraggable(item.sprite, false);
+    this.audio.playDropChime();
     this.placedCount += 1;
 
     this.tweens.killTweensOf(item.sprite);
@@ -262,7 +314,7 @@ export class KittyRoomBuilderScene extends Phaser.Scene {
         this.sparkle(target.zone.x, target.zone.y, 0xfff4a8, 7);
         this.tweens.add({
           targets: item.sprite,
-          angle: item.data.id === "ball" ? 10 : 0,
+          angle: item.data.id === "yarn" ? 10 : 0,
           duration: 110,
           yoyo: true,
           ease: "Sine.out",
@@ -294,6 +346,8 @@ export class KittyRoomBuilderScene extends Phaser.Scene {
 
     this.input.enabled = false;
     this.game.events.emit(KITTY_ROOM_BUILDER_LEVEL_COMPLETE_EVENT);
+    this.sound.play(COMPLETION_APPLAUSE_ASSET_KEY, { volume: 0.75 });
+    this.audio.speakCompletionPraise();
     this.sparkle(playArea.centerX, playArea.y + playArea.height * 0.42, 0xffffff, 18);
     this.createHappyKitten(playArea.x + playArea.width * 0.5, playArea.y + playArea.height * 0.43, 1.02);
     this.replayTimer = this.time.delayedCall(1450, () => {
@@ -304,20 +358,24 @@ export class KittyRoomBuilderScene extends Phaser.Scene {
 
   private createReplayButton(): void {
     const position = getKittyRoomReplayPosition(this.layout);
-    const size = Phaser.Math.Clamp(this.layout.playArea.width * 0.105, 62, 78);
+    const size = this.getNavButtonSize();
 
     this.replayButton = this.add.image(position.x, position.y, REPLAY_BUTTON_ASSET_KEY).setDisplaySize(size, size).setDepth(90);
     this.replayButton.setInteractive({ useHandCursor: true });
     this.replayButton.on("pointerdown", () => this.startRound());
     this.replayPulse = this.tweens.add({
       targets: this.replayButton,
-      scaleX: 1.08,
-      scaleY: 1.08,
-      duration: 760,
+      scaleX: this.replayButton.scaleX * 1.16,
+      scaleY: this.replayButton.scaleY * 1.16,
+      duration: 460,
       yoyo: true,
       repeat: -1,
       ease: "Sine.inOut",
     });
+  }
+
+  private getNavButtonSize(): number {
+    return Phaser.Math.Clamp(this.layout.viewportWidth * 0.1, MIN_NAV_BUTTON_SIZE, MAX_NAV_BUTTON_SIZE);
   }
 
   private sparkle(x: number, y: number, color: number, count: number): void {
@@ -338,36 +396,16 @@ export class KittyRoomBuilderScene extends Phaser.Scene {
     }
   }
 
-  private createPeekingKitten(x: number, y: number, scale: number): void {
-    const kitten = this.makeKittenContainer(x, y, scale * this.layout.uiScale).setDepth(18);
-    kitten.setAlpha(0.82);
-    this.tweens.add({ targets: kitten, y: y + 5, duration: 1700, yoyo: true, repeat: -1, ease: "Sine.inOut" });
-  }
-
   private createHappyKitten(x: number, y: number, scale: number): void {
-    const kitten = this.makeKittenContainer(x, y + 60 * this.layout.uiScale, scale * this.layout.uiScale).setDepth(55);
+    const finalScale = Phaser.Math.Clamp((this.layout.playArea.width / (this.layout.isPortrait ? 1700 : 4300)) * scale, 0.16, 0.24);
+    const kitten = this.add.image(x, y + 60 * this.layout.uiScale, HAPPY_KITTEN_ASSET_KEY).setDepth(55);
     kitten.setScale(0.12);
-    this.tweens.add({ targets: kitten, y, scale: scale * this.layout.uiScale, duration: 520, ease: "Back.out" });
-  }
-
-  private makeKittenContainer(x: number, y: number, scale: number): Phaser.GameObjects.Container {
-    const tail = this.add.ellipse(58, 18, 28, 86, 0xf4b46d, 1).setAngle(-30);
-    const body = this.add.ellipse(0, 48, 86, 104, 0xf4b46d, 1);
-    const head = this.add.circle(0, -12, 48, 0xf8c789, 1);
-    const leftEar = this.add.triangle(-30, -50, 0, 34, 26, 0, 52, 34, 0xf8c789, 1);
-    const rightEar = this.add.triangle(30, -50, 0, 34, 26, 0, 52, 34, 0xf8c789, 1);
-    const leftEye = this.add.circle(-16, -14, 5, 0x4b342c, 1);
-    const rightEye = this.add.circle(16, -14, 5, 0x4b342c, 1);
-    const nose = this.add.circle(0, 2, 4, 0x9e5e54, 1);
-    const smile = this.add.arc(0, 9, 16, 0, 180, false, 0x4b342c, 0).setStrokeStyle(4, 0x4b342c, 1);
-    const shadow = this.add.ellipse(0, 102, 98, 24, 0x4b342c, 0.14);
-
-    return this.add.container(x, y, [shadow, tail, body, head, leftEar, rightEar, leftEye, rightEye, nose, smile]).setScale(scale);
+    this.tweens.add({ targets: kitten, y, scale: finalScale, duration: 520, ease: "Back.out" });
   }
 
   private getObjectScale(id: RoomObjectKind): number {
     const size = OBJECT_SIZE[id];
-    const targetVisualSize = this.layout.isPortrait ? 104 : 112;
+    const targetVisualSize = this.layout.isPortrait ? 96 : 140;
     return Math.min((targetVisualSize * this.layout.objectScale) / Math.max(size.width, size.height), this.layout.objectScale);
   }
 
@@ -383,88 +421,7 @@ export class KittyRoomBuilderScene extends Phaser.Scene {
     return Math.min((Math.max(target.width, target.height) * targetScale) / largerSide, targetScale);
   }
 
-  private createGeneratedTextures(): void {
-    for (const object of createRoomObjects()) {
-      this.createObjectTexture(object.id, object.textureKey, false);
-      this.createObjectTexture(object.id, object.silhouetteKey, true);
-    }
-  }
-
-  private createObjectTexture(id: RoomObjectKind, key: string, silhouette: boolean): void {
-    if (this.textures.exists(key)) {
-      return;
-    }
-
-    const graphics = this.make.graphics({ x: 0, y: 0 });
-    const fill = silhouette ? 0x9d7d81 : this.getObjectColor(id);
-    const stroke = silhouette ? 0x7f6267 : 0xffffff;
-    const alpha = silhouette ? 0.58 : 1;
-
-    graphics.fillStyle(fill, alpha);
-    graphics.lineStyle(silhouette ? 0 : 5, stroke, silhouette ? 0 : 0.95);
-
-    if (id === "window") {
-      graphics.fillRoundedRect(12, 12, 100, 100, 18);
-      graphics.strokeRoundedRect(12, 12, 100, 100, 18);
-      if (!silhouette) {
-        graphics.lineStyle(8, 0xffffff, 0.9);
-        graphics.lineBetween(62, 18, 62, 106);
-        graphics.lineBetween(18, 62, 106, 62);
-      }
-    }
-
-    if (id === "bed") {
-      graphics.fillRoundedRect(10, 42, 170, 70, 24);
-      graphics.strokeRoundedRect(10, 42, 170, 70, 24);
-      graphics.fillStyle(silhouette ? fill : 0xfff2cf, alpha);
-      graphics.fillRoundedRect(28, 18, 76, 54, 20);
-      if (!silhouette) {
-        graphics.lineStyle(5, 0xffffff, 0.8);
-        graphics.strokeRoundedRect(28, 18, 76, 54, 20);
-      }
-    }
-
-    if (id === "rug") {
-      graphics.fillEllipse(92, 58, 168, 96);
-      if (!silhouette) {
-        graphics.lineStyle(6, 0xffffff, 0.78);
-        graphics.strokeEllipse(92, 58, 168, 96);
-      }
-    }
-
-    if (id === "ball") {
-      graphics.fillCircle(59, 59, 48);
-      if (!silhouette) {
-        graphics.lineStyle(7, 0xffffff, 0.82);
-        graphics.beginPath();
-        graphics.arc(59, 59, 34, Phaser.Math.DegToRad(210), Phaser.Math.DegToRad(30));
-        graphics.strokePath();
-      }
-    }
-
-    if (id === "bowl") {
-      graphics.fillEllipse(69, 56, 118, 66);
-      graphics.fillStyle(silhouette ? fill : 0xffffff, silhouette ? alpha : 0.28);
-      graphics.fillEllipse(69, 44, 102, 34);
-      if (!silhouette) {
-        graphics.lineStyle(5, 0xffffff, 0.82);
-        graphics.strokeEllipse(69, 56, 118, 66);
-      }
-    }
-
-    graphics.generateTexture(key, OBJECT_SIZE[id].width, OBJECT_SIZE[id].height);
-    graphics.destroy();
-  }
-
-  private getObjectColor(id: RoomObjectKind): number {
-    const colors: Record<RoomObjectKind, number> = {
-      window: 0x9fe7ff,
-      bed: 0xf48da8,
-      rug: 0xb98be8,
-      ball: 0x69c5ff,
-      bowl: 0x83d9a8,
-    };
-
-    return colors[id];
+  private getTargetTextureKey(id: RoomObjectKind): string {
+    return createRoomObjects().find((object) => object.id === id)?.silhouetteKey ?? `kitty-${id}-target`;
   }
 }

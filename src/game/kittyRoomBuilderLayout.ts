@@ -1,6 +1,9 @@
 import type { RoomObjectKind } from "./kittyRoomBuilder";
 
 const TARGET_LANDSCAPE_ASPECT = 16 / 9;
+const MIN_NAV_BUTTON_SIZE = 58;
+const MAX_NAV_BUTTON_SIZE = 74;
+const NAV_BUTTON_INSET = 12;
 
 export interface PlayArea {
   x: number;
@@ -70,20 +73,20 @@ export const getKittyRoomTargetSlots = (layout: KittyRoomBuilderLayout): RoomTar
 
   if (layout.isPortrait) {
     return [
-      { id: "window", x: playArea.x + playArea.width * 0.71, y: playArea.y + playArea.height * 0.2, width: 112, height: 112, scale },
-      { id: "bed", x: playArea.x + playArea.width * 0.36, y: playArea.y + playArea.height * 0.42, width: 178, height: 118, scale },
-      { id: "rug", x: playArea.x + playArea.width * 0.5, y: playArea.y + playArea.height * 0.62, width: 176, height: 108, scale },
-      { id: "ball", x: playArea.x + playArea.width * 0.76, y: playArea.y + playArea.height * 0.5, width: 104, height: 104, scale },
-      { id: "bowl", x: playArea.x + playArea.width * 0.23, y: playArea.y + playArea.height * 0.59, width: 126, height: 90, scale },
+      { id: "window", x: playArea.x + playArea.width * 0.58, y: playArea.y + playArea.height * 0.24, width: 112, height: 116, scale },
+      { id: "bed", x: playArea.x + playArea.width * 0.52, y: playArea.y + playArea.height * 0.45, width: 186, height: 132, scale },
+      { id: "rug", x: playArea.x + playArea.width * 0.5, y: playArea.y + playArea.height * 0.62, width: 178, height: 102, scale },
+      { id: "bowl", x: playArea.x + playArea.width * 0.23, y: playArea.y + playArea.height * 0.61, width: 132, height: 94, scale },
+      { id: "yarn", x: playArea.x + playArea.width * 0.78, y: playArea.y + playArea.height * 0.56, width: 116, height: 80, scale },
     ];
   }
 
   return [
-    { id: "window", x: playArea.x + playArea.width * 0.68, y: playArea.y + playArea.height * 0.2, width: 118, height: 118, scale },
-    { id: "bed", x: playArea.x + playArea.width * 0.36, y: playArea.y + playArea.height * 0.45, width: 184, height: 122, scale },
-    { id: "rug", x: playArea.x + playArea.width * 0.51, y: playArea.y + playArea.height * 0.67, width: 184, height: 112, scale },
-    { id: "ball", x: playArea.x + playArea.width * 0.73, y: playArea.y + playArea.height * 0.52, width: 108, height: 108, scale },
-    { id: "bowl", x: playArea.x + playArea.width * 0.24, y: playArea.y + playArea.height * 0.62, width: 132, height: 92, scale },
+    { id: "window", x: playArea.x + playArea.width * 0.34, y: playArea.y + playArea.height * 0.29, width: 124, height: 128, scale },
+    { id: "bed", x: playArea.x + playArea.width * 0.64, y: playArea.y + playArea.height * 0.51, width: 202, height: 142, scale },
+    { id: "rug", x: playArea.x + playArea.width * 0.49, y: playArea.y + playArea.height * 0.69, width: 190, height: 108, scale },
+    { id: "bowl", x: playArea.x + playArea.width * 0.24, y: playArea.y + playArea.height * 0.68, width: 142, height: 100, scale },
+    { id: "yarn", x: playArea.x + playArea.width * 0.78, y: playArea.y + playArea.height * 0.67, width: 122, height: 82, scale },
   ];
 };
 
@@ -94,8 +97,8 @@ export const getKittyRoomObjectTrayPositions = (layout: KittyRoomBuilderLayout):
   if (layout.isPortrait) {
     return [
       { x: playArea.x + playArea.width * 0.18, y },
-      { x: playArea.x + playArea.width * 0.5, y },
-      { x: playArea.x + playArea.width * 0.82, y },
+      { x: playArea.x + playArea.width * 0.48, y },
+      { x: playArea.x + playArea.width * 0.68, y },
     ];
   }
 
@@ -109,11 +112,10 @@ export const getKittyRoomObjectTrayPositions = (layout: KittyRoomBuilderLayout):
 };
 
 export const getKittyRoomReplayPosition = (layout: KittyRoomBuilderLayout): PointLayout => {
-  const { playArea } = layout;
-  const inset = clamp(playArea.width * 0.085, 68, 92);
+  const buttonSize = clamp(layout.viewportWidth * 0.1, MIN_NAV_BUTTON_SIZE, MAX_NAV_BUTTON_SIZE);
 
   return {
-    x: playArea.x + playArea.width - inset,
-    y: playArea.y + inset,
+    x: layout.viewportWidth - NAV_BUTTON_INSET - buttonSize / 2,
+    y: NAV_BUTTON_INSET + buttonSize / 2,
   };
 };
