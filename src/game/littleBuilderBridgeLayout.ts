@@ -1,4 +1,4 @@
-import type { BridgeBlockKind } from "./littleBuilderBridge";
+import type { BridgeTargetKind } from "./littleBuilderBridge";
 
 const TARGET_LANDSCAPE_ASPECT = 16 / 9;
 const MIN_NAV_BUTTON_SIZE = 58;
@@ -25,7 +25,7 @@ export interface LittleBuilderBridgeLayout {
 }
 
 export interface BridgeTargetLayout {
-  id: BridgeBlockKind;
+  id: BridgeTargetKind;
   x: number;
   y: number;
   width: number;
@@ -72,19 +72,19 @@ export const computeLittleBuilderBridgeLayout = (
 
 export const getLittleBuilderBridgeTargets = (layout: LittleBuilderBridgeLayout): BridgeTargetLayout[] => {
   const { playArea } = layout;
-  const scale = layout.isPortrait ? clamp(playArea.width / 390, 0.82, 0.96) : clamp(playArea.width / 900, 0.94, 1.1);
-  const y = playArea.y + playArea.height * (layout.isPortrait ? 0.43 : 0.48);
-  const ids: BridgeBlockKind[] = ["left-plank", "arch-cap", "center-plank", "right-plank"];
+  const scale = layout.isPortrait ? clamp(playArea.width / 390, 0.86, 1) : clamp(playArea.width / 900, 0.96, 1.12);
+  const y = playArea.y + playArea.height * (layout.isPortrait ? 0.48 : 0.485);
+  const ids: BridgeTargetKind[] = ["left-stone", "center-wood", "right-stone"];
   const xs = layout.isPortrait
-    ? [0.2, 0.4, 0.6, 0.8]
-    : [0.31, 0.44, 0.57, 0.7];
+    ? [0.23, 0.5, 0.77]
+    : [0.31, 0.5, 0.7];
 
   return ids.map((id, index) => ({
     id,
     x: playArea.x + playArea.width * xs[index],
     y,
-    width: id === "arch-cap" ? 108 : 98,
-    height: id === "arch-cap" ? 94 : 86,
+    width: layout.isPortrait ? (id === "center-wood" ? 118 : 92) : id === "center-wood" ? 150 : 118,
+    height: layout.isPortrait ? (id === "center-wood" ? 92 : 96) : id === "center-wood" ? 110 : 124,
     scale,
   }));
 };
@@ -93,24 +93,25 @@ export const getLittleBuilderBridgeTrayPositions = (layout: LittleBuilderBridgeL
   const { playArea } = layout;
 
   if (layout.isPortrait) {
-    const upperY = playArea.y + playArea.height - layout.bottomSafe - 126 * layout.blockScale;
-    const lowerY = playArea.y + playArea.height - layout.bottomSafe - 42 * layout.blockScale;
+    const trayHeight = 184 * layout.blockScale;
+    const trayCenterY = playArea.y + playArea.height - trayHeight / 2 - 10 * layout.uiScale;
+    const rowOffset = 42 * layout.blockScale;
 
     return [
-      { x: playArea.x + playArea.width * 0.29, y: upperY },
-      { x: playArea.x + playArea.width * 0.71, y: upperY },
-      { x: playArea.x + playArea.width * 0.29, y: lowerY },
-      { x: playArea.x + playArea.width * 0.71, y: lowerY },
+      { x: playArea.x + playArea.width * 0.32, y: trayCenterY - rowOffset },
+      { x: playArea.x + playArea.width * 0.68, y: trayCenterY - rowOffset },
+      { x: playArea.x + playArea.width * 0.5, y: trayCenterY + rowOffset },
     ];
   }
 
-  const y = playArea.y + playArea.height - layout.bottomSafe - 74 * layout.blockScale;
+  const trayHeight = 138 * layout.blockScale;
+  const y = playArea.y + playArea.height - trayHeight / 2 - 10 * layout.uiScale;
+  const spacing = clamp(playArea.width * 0.16, 150, 210);
 
   return [
-    { x: playArea.x + playArea.width * 0.26, y },
-    { x: playArea.x + playArea.width * 0.42, y },
-    { x: playArea.x + playArea.width * 0.58, y },
-    { x: playArea.x + playArea.width * 0.74, y },
+    { x: playArea.centerX - spacing, y },
+    { x: playArea.x + playArea.width * 0.5, y },
+    { x: playArea.centerX + spacing, y },
   ];
 };
 

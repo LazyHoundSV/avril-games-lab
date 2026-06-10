@@ -7,11 +7,11 @@ import {
 } from "./littleBuilderBridgeLayout";
 
 describe("Little Builder Bridge layout", () => {
-  it("uses four bridge targets and four tray positions", () => {
+  it("uses three bridge targets and three tray positions", () => {
     const layout = computeLittleBuilderBridgeLayout(1280, 720);
 
-    expect(getLittleBuilderBridgeTargets(layout)).toHaveLength(4);
-    expect(getLittleBuilderBridgeTrayPositions(layout)).toHaveLength(4);
+    expect(getLittleBuilderBridgeTargets(layout)).toHaveLength(3);
+    expect(getLittleBuilderBridgeTrayPositions(layout)).toHaveLength(3);
   });
 
   it("keeps touch targets large in mobile portrait", () => {
@@ -21,11 +21,25 @@ describe("Little Builder Bridge layout", () => {
 
     expect(layout.isPortrait).toBe(true);
     for (const target of targets) {
-      expect(target.width * target.scale).toBeGreaterThanOrEqual(80);
-      expect(target.height * target.scale).toBeGreaterThanOrEqual(70);
+      expect(target.width * target.scale).toBeGreaterThanOrEqual(88);
+      expect(target.height * target.scale).toBeGreaterThanOrEqual(88);
     }
     expect(Math.abs(trayPositions[1].x - trayPositions[0].x)).toBeGreaterThanOrEqual(120);
     expect(Math.abs(trayPositions[2].y - trayPositions[0].y)).toBeGreaterThanOrEqual(64);
+  });
+
+  it("keeps landscape bridge gaps aligned with the painted background slots", () => {
+    const layout = computeLittleBuilderBridgeLayout(1280, 720);
+    const targets = getLittleBuilderBridgeTargets(layout);
+
+    expect(targets.map((target) => Math.round((target.x - layout.playArea.x) / layout.playArea.width * 100))).toEqual([
+      31,
+      50,
+      70,
+    ]);
+    for (let index = 1; index < targets.length; index += 1) {
+      expect(targets[index].x - targets[index - 1].x).toBeGreaterThanOrEqual(110);
+    }
   });
 
   it.each([

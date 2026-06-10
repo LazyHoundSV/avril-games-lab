@@ -11,7 +11,10 @@ import {
   KITTY_ROOM_BUILDER_LEVEL_COMPLETE_EVENT,
   KittyRoomBuilderScene,
 } from "./game/KittyRoomBuilderScene";
-import { LittleBuilderBridgeScene } from "./game/LittleBuilderBridgeScene";
+import {
+  LITTLE_BUILDER_BRIDGE_LEVEL_COMPLETE_EVENT,
+  LittleBuilderBridgeScene,
+} from "./game/LittleBuilderBridgeScene";
 
 interface GameDefinition {
   id: string;
@@ -67,7 +70,9 @@ const games: GameDefinition[] = [
       shadow: "#75b66d",
     },
     icon: "bridge",
+    previewImage: "/assets/little-builder-bridge/background.png",
     scene: LittleBuilderBridgeScene,
+    completeEvent: LITTLE_BUILDER_BRIDGE_LEVEL_COMPLETE_EVENT,
   },
 ];
 
