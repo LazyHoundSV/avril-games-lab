@@ -11,6 +11,10 @@ import {
   KITTY_ROOM_BUILDER_LEVEL_COMPLETE_EVENT,
   KittyRoomBuilderScene,
 } from "./game/KittyRoomBuilderScene";
+import {
+  LITTLE_BUILDER_BRIDGE_LEVEL_COMPLETE_EVENT,
+  LittleBuilderBridgeScene,
+} from "./game/LittleBuilderBridgeScene";
 
 interface GameDefinition {
   id: string;
@@ -24,7 +28,7 @@ interface GameDefinition {
   icon: string;
   previewImage?: string;
   scene: typeof Phaser.Scene;
-  completeEvent: string;
+  completeEvent?: string;
 }
 
 const games: GameDefinition[] = [
@@ -55,6 +59,20 @@ const games: GameDefinition[] = [
     previewImage: "/assets/kitty-room-builder/menu-preview.png",
     scene: KittyRoomBuilderScene,
     completeEvent: KITTY_ROOM_BUILDER_LEVEL_COMPLETE_EVENT,
+  },
+  {
+    id: "little-builder-bridge",
+    title: "Little Builder Bridge",
+    description: "Build a cozy bridge so the puppy can cross.",
+    colors: {
+      background: "#d7f4ff",
+      accent: "#f25757",
+      shadow: "#75b66d",
+    },
+    icon: "bridge",
+    previewImage: "/assets/little-builder-bridge/background.png",
+    scene: LittleBuilderBridgeScene,
+    completeEvent: LITTLE_BUILDER_BRIDGE_LEVEL_COMPLETE_EVENT,
   },
 ];
 
@@ -89,6 +107,20 @@ const drawIcon = (icon: string): string => {
         <circle cx="34" cy="64" r="17" fill="#e9544f" />
         <circle cx="26" cy="35" r="17" fill="#4fa7e8" />
         <circle cx="48" cy="48" r="13" fill="#fff6c7" stroke="#24432f" stroke-width="4" />
+      </svg>
+    `;
+  }
+
+  if (icon === "bridge") {
+    return `
+      <svg class="game-card__icon" viewBox="0 0 96 96" aria-hidden="true">
+        <rect x="8" y="54" width="80" height="16" rx="8" fill="#8c5b39" />
+        <rect x="14" y="42" width="16" height="20" rx="5" fill="#f25757" />
+        <path d="M34 62V46c0-9 7-16 16-16s16 7 16 16v16z" fill="#f4c84f" />
+        <rect x="66" y="42" width="16" height="20" rx="5" fill="#62be5a" />
+        <path d="M13 38h70" stroke="#6d4228" stroke-width="7" stroke-linecap="round" />
+        <circle cx="20" cy="74" r="5" fill="#4f9ded" />
+        <circle cx="76" cy="74" r="5" fill="#4f9ded" />
       </svg>
     `;
   }
@@ -202,7 +234,7 @@ const startGame = (gameDefinition: GameDefinition): void => {
 
   const confettiRootElement = document.querySelector<HTMLElement>("#confetti-root");
 
-  if (confettiRootElement) {
+  if (confettiRootElement && gameDefinition.completeEvent) {
     confettiRoot = createRoot(confettiRootElement);
     activeGame.events.on(gameDefinition.completeEvent, showLevelCompleteConfetti);
   }

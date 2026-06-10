@@ -90,6 +90,11 @@ canvas {
   display: block;
 }
 
+#app[data-screen="game"] canvas {
+  width: 100vw;
+  height: 100dvh;
+}
+
 button {
   font: inherit;
 }
