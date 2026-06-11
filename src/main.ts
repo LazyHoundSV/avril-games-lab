@@ -15,6 +15,7 @@ import {
   LITTLE_BUILDER_BRIDGE_LEVEL_COMPLETE_EVENT,
   LittleBuilderBridgeScene,
 } from "./game/LittleBuilderBridgeScene";
+import { GardenGateLocksScene } from "./game/GardenGateLocksScene";
 
 interface GameDefinition {
   id: string;
@@ -74,6 +75,18 @@ const games: GameDefinition[] = [
     scene: LittleBuilderBridgeScene,
     completeEvent: LITTLE_BUILDER_BRIDGE_LEVEL_COMPLETE_EVENT,
   },
+  {
+    id: "garden-gate-locks",
+    title: "Garden Gate Locks",
+    description: "Open cozy garden gates with matching locks.",
+    colors: {
+      background: "#d9ffe2",
+      accent: "#3f8fe5",
+      shadow: "#6fb95f",
+    },
+    icon: "gate",
+    scene: GardenGateLocksScene,
+  },
 ];
 
 const app = document.querySelector<HTMLElement>("#app");
@@ -121,6 +134,21 @@ const drawIcon = (icon: string): string => {
         <path d="M13 38h70" stroke="#6d4228" stroke-width="7" stroke-linecap="round" />
         <circle cx="20" cy="74" r="5" fill="#4f9ded" />
         <circle cx="76" cy="74" r="5" fill="#4f9ded" />
+      </svg>
+    `;
+  }
+
+  if (icon === "gate") {
+    return `
+      <svg class="game-card__icon" viewBox="0 0 96 96" aria-hidden="true">
+        <rect x="12" y="34" width="11" height="42" rx="4" fill="#5b9d63" />
+        <rect x="73" y="34" width="11" height="42" rx="4" fill="#5b9d63" />
+        <path d="M24 75V39c0-9 7-16 16-16h16c9 0 16 7 16 16v36z" fill="#78c8c9" />
+        <path d="M30 75V42c0-5 4-9 9-9h18c5 0 9 4 9 9v33z" fill="#f2cf72" />
+        <circle cx="48" cy="53" r="16" fill="#3f8fe5" stroke="#ffffff" stroke-width="5" />
+        <path d="M48 41l4 8 9 1-7 6 2 9-8-5-8 5 2-9-7-6 9-1z" fill="#ffffff" />
+        <circle cx="24" cy="26" r="7" fill="#ef5b4f" />
+        <circle cx="72" cy="26" r="7" fill="#f0c847" />
       </svg>
     `;
   }
