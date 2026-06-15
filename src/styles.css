@@ -258,11 +258,10 @@ button {
 
 .game-card__action {
   display: inline-grid;
-  width: fit-content;
-  min-width: 92px;
-  min-height: 46px;
+  width: 92px;
+  height: 46px;
   place-items: center;
-  padding: 0 20px;
+  padding: 0;
   border: 1px solid rgba(255, 255, 255, 0.48);
   border-radius: 8px;
   background: linear-gradient(135deg, #14e8f5, #e34fff);
