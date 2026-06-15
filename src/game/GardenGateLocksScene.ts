@@ -90,7 +90,6 @@ export class GardenGateLocksScene extends Phaser.Scene {
   private replayButton?: Phaser.GameObjects.Image;
   private replayPulse?: Phaser.Tweens.Tween;
   private replayTimer?: Phaser.Time.TimerEvent;
-  private trayGraphic?: Phaser.GameObjects.Graphics;
   private cueMode: GateCueMode = "color";
 
   constructor() {
@@ -126,7 +125,6 @@ export class GardenGateLocksScene extends Phaser.Scene {
     this.openedCount = 0;
     this.replayButton = undefined;
     this.replayPulse = undefined;
-    this.trayGraphic = undefined;
 
     this.drawGarden();
     this.createGates();
@@ -140,22 +138,6 @@ export class GardenGateLocksScene extends Phaser.Scene {
     graphics.fillStyle(0xbff2ff, 1);
     graphics.fillRect(0, 0, this.scale.width, this.scale.height);
     this.addCoverImage(BACKGROUND_ASSET_KEY, playArea.centerX, playArea.centerY, playArea.width, playArea.height, 1);
-    this.drawTray();
-  }
-
-  private drawTray(): void {
-    const { playArea } = this.layout;
-    const graphics = this.add.graphics();
-    const trayHeight = (this.layout.isPortrait ? 148 : 136) * this.layout.tokenScale;
-    const trayY = playArea.y + playArea.height * (this.layout.isPortrait ? 0.72 : 0.69);
-    const inset = 18 * this.layout.uiScale;
-
-    graphics.fillStyle(0xfff1ce, 0.76);
-    graphics.lineStyle(2 * this.layout.uiScale, 0xb87a35, 0.34);
-    graphics.fillRoundedRect(playArea.x + inset, trayY, playArea.width - inset * 2, trayHeight, 24 * this.layout.uiScale);
-    graphics.strokeRoundedRect(playArea.x + inset, trayY, playArea.width - inset * 2, trayHeight, 24 * this.layout.uiScale);
-    graphics.setDepth(10);
-    this.trayGraphic = graphics;
   }
 
   private createGates(): void {
@@ -344,7 +326,6 @@ export class GardenGateLocksScene extends Phaser.Scene {
     this.input.enabled = false;
     this.game.events.emit(GARDEN_GATE_LOCKS_LEVEL_COMPLETE_EVENT);
     this.sound.play(COMPLETION_APPLAUSE_ASSET_KEY, { volume: 0.72, seek: 0.1 });
-    this.fadeOutTray();
     this.drawFountain(playArea.centerX, fountainY);
     this.sparkle(playArea.centerX, fountainY - 28 * this.layout.uiScale, 18);
 
@@ -436,19 +417,6 @@ export class GardenGateLocksScene extends Phaser.Scene {
 
     this.fitImageToBox(visitor, maxWidth, maxHeight);
     return visitor;
-  }
-
-  private fadeOutTray(): void {
-    if (!this.trayGraphic) {
-      return;
-    }
-
-    this.tweens.add({
-      targets: this.trayGraphic,
-      alpha: 0,
-      duration: 260,
-      ease: "Sine.inOut",
-    });
   }
 
   private drawFountain(x: number, y: number): Phaser.GameObjects.Image {
