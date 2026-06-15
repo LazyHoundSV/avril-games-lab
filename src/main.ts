@@ -15,7 +15,10 @@ import {
   LITTLE_BUILDER_BRIDGE_LEVEL_COMPLETE_EVENT,
   LittleBuilderBridgeScene,
 } from "./game/LittleBuilderBridgeScene";
-import { GardenGateLocksScene } from "./game/GardenGateLocksScene";
+import {
+  GARDEN_GATE_LOCKS_LEVEL_COMPLETE_EVENT,
+  GardenGateLocksScene,
+} from "./game/GardenGateLocksScene";
 
 interface GameDefinition {
   id: string;
@@ -87,6 +90,7 @@ const games: GameDefinition[] = [
     icon: "gate",
     previewImage: "/assets/garden-gate-locks/menu-preview.png",
     scene: GardenGateLocksScene,
+    completeEvent: GARDEN_GATE_LOCKS_LEVEL_COMPLETE_EVENT,
   },
 ];
 

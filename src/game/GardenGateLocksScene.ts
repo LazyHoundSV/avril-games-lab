@@ -23,12 +23,19 @@ const COLOR_BASKET_ASSET_BASE_PATH = "/assets/color-basket-garden";
 const GARDEN_GATE_ASSET_BASE_PATH = "/assets/garden-gate-locks";
 const REPLAY_BUTTON_ASSET_KEY = "garden-gate-locks-replay-button";
 const REPLAY_BUTTON_ASSET_FILE = "replay_icon_hq_248.png";
+const COMPLETION_APPLAUSE_ASSET_KEY = "garden-gate-locks-applause-complete";
+const COMPLETION_APPLAUSE_ASSET_FILES = [
+  `${COLOR_BASKET_ASSET_BASE_PATH}/audio/applause-complete-chosic-3s.ogg`,
+  `${COLOR_BASKET_ASSET_BASE_PATH}/audio/applause-complete-chosic-3s.mp3`,
+];
 const BACKGROUND_ASSET_KEY = "garden-gate-locks-background";
 const GATE_DOOR_ASSET_KEY = "garden-gate-locks-door-closed";
 const FOUNTAIN_ASSET_KEY = "garden-gate-locks-fountain";
 const SPARKLE_BURST_ASSET_KEY = "garden-gate-locks-sparkle-burst";
 const MIN_NAV_BUTTON_SIZE = 58;
 const MAX_NAV_BUTTON_SIZE = 74;
+
+export const GARDEN_GATE_LOCKS_LEVEL_COMPLETE_EVENT = "garden-gate-locks:level-complete";
 
 const GARDEN_GATE_ASSET_FILES: Record<string, string> = {
   [BACKGROUND_ASSET_KEY]: "background.png",
@@ -83,6 +90,7 @@ export class GardenGateLocksScene extends Phaser.Scene {
   private replayButton?: Phaser.GameObjects.Image;
   private replayPulse?: Phaser.Tweens.Tween;
   private replayTimer?: Phaser.Time.TimerEvent;
+  private trayGraphic?: Phaser.GameObjects.Graphics;
   private cueMode: GateCueMode = "color";
 
   constructor() {
@@ -90,6 +98,7 @@ export class GardenGateLocksScene extends Phaser.Scene {
   }
 
   preload(): void {
+    this.load.audio(COMPLETION_APPLAUSE_ASSET_KEY, COMPLETION_APPLAUSE_ASSET_FILES);
     this.load.image(REPLAY_BUTTON_ASSET_KEY, `${COLOR_BASKET_ASSET_BASE_PATH}/${REPLAY_BUTTON_ASSET_FILE}`);
     for (const [assetKey, file] of Object.entries(GARDEN_GATE_ASSET_FILES)) {
       this.load.image(assetKey, `${GARDEN_GATE_ASSET_BASE_PATH}/${file}`);
@@ -117,6 +126,7 @@ export class GardenGateLocksScene extends Phaser.Scene {
     this.openedCount = 0;
     this.replayButton = undefined;
     this.replayPulse = undefined;
+    this.trayGraphic = undefined;
 
     this.drawGarden();
     this.createGates();
@@ -145,6 +155,7 @@ export class GardenGateLocksScene extends Phaser.Scene {
     graphics.fillRoundedRect(playArea.x + inset, trayY, playArea.width - inset * 2, trayHeight, 24 * this.layout.uiScale);
     graphics.strokeRoundedRect(playArea.x + inset, trayY, playArea.width - inset * 2, trayHeight, 24 * this.layout.uiScale);
     graphics.setDepth(10);
+    this.trayGraphic = graphics;
   }
 
   private createGates(): void {
@@ -206,6 +217,10 @@ export class GardenGateLocksScene extends Phaser.Scene {
   }
 
   private registerTokenDragHandlers(token: DraggableGateToken): void {
+    token.container.on("pointerdown", () => {
+      this.sound.unlock();
+    });
+
     token.container.on("dragstart", () => {
       this.tweens.killTweensOf(token.container);
       token.container.setDepth(60);
@@ -322,12 +337,20 @@ export class GardenGateLocksScene extends Phaser.Scene {
 
   private completeRound(): void {
     const { playArea } = this.layout;
+    const fountainY = playArea.y + playArea.height * (this.layout.isPortrait ? 0.57 : 0.62);
+    const visitorSpacing = (this.layout.isPortrait ? 78 : 116) * this.layout.uiScale;
+    const visitorY = fountainY + (this.layout.isPortrait ? 78 : 92) * this.layout.uiScale;
+
     this.input.enabled = false;
-    this.drawFountain(playArea.centerX, playArea.y + playArea.height * (this.layout.isPortrait ? 0.58 : 0.62));
-    this.sparkle(playArea.centerX, playArea.y + playArea.height * 0.56, 18);
+    this.game.events.emit(GARDEN_GATE_LOCKS_LEVEL_COMPLETE_EVENT);
+    this.sound.play(COMPLETION_APPLAUSE_ASSET_KEY, { volume: 0.72, seek: 0.1 });
+    this.fadeOutTray();
+    this.drawFountain(playArea.centerX, fountainY);
+    this.sparkle(playArea.centerX, fountainY - 28 * this.layout.uiScale, 18);
 
     this.gates.forEach((gate, index) => {
       gate.visitor.setPosition(gate.reveal.x, gate.reveal.y);
+      gate.visitor.setDepth(44);
       this.tweens.add({
         targets: gate.reveal,
         alpha: 0,
@@ -336,9 +359,11 @@ export class GardenGateLocksScene extends Phaser.Scene {
       });
       this.tweens.add({
         targets: gate.visitor,
-        x: playArea.centerX + (index - 1) * 54 * this.layout.uiScale,
-        y: playArea.y + playArea.height * (this.layout.isPortrait ? 0.58 : 0.61),
+        x: playArea.centerX + (index - 1) * visitorSpacing,
+        y: visitorY,
         alpha: 1,
+        scaleX: gate.visitor.scaleX * (this.layout.isPortrait ? 1.48 : 1.7),
+        scaleY: gate.visitor.scaleY * (this.layout.isPortrait ? 1.48 : 1.7),
         duration: 520 + index * 80,
         ease: "Sine.inOut",
       });
@@ -413,11 +438,36 @@ export class GardenGateLocksScene extends Phaser.Scene {
     return visitor;
   }
 
-  private drawFountain(x: number, y: number): void {
-    const scale = this.layout.uiScale;
-    const fountain = this.add.image(x, y + 18 * scale, FOUNTAIN_ASSET_KEY).setDepth(36);
+  private fadeOutTray(): void {
+    if (!this.trayGraphic) {
+      return;
+    }
 
-    this.fitImageToBox(fountain, 180 * scale, 118 * scale);
+    this.tweens.add({
+      targets: this.trayGraphic,
+      alpha: 0,
+      duration: 260,
+      ease: "Sine.inOut",
+    });
+  }
+
+  private drawFountain(x: number, y: number): Phaser.GameObjects.Image {
+    const scale = this.layout.uiScale;
+    const fountain = this.add.image(x, y + 18 * scale, FOUNTAIN_ASSET_KEY).setDepth(36).setAlpha(0);
+    const maxWidth = (this.layout.isPortrait ? 318 : 420) * scale;
+    const maxHeight = (this.layout.isPortrait ? 248 : 318) * scale;
+
+    this.fitImageToBox(fountain, maxWidth, maxHeight);
+    this.tweens.add({
+      targets: fountain,
+      alpha: 1,
+      scaleX: fountain.scaleX * 1.04,
+      scaleY: fountain.scaleY * 1.04,
+      duration: 360,
+      ease: "Back.out",
+    });
+
+    return fountain;
   }
 
   private sparkle(x: number, y: number, count: number): void {
