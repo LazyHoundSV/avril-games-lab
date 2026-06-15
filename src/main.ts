@@ -85,6 +85,7 @@ const games: GameDefinition[] = [
       shadow: "#6fb95f",
     },
     icon: "gate",
+    previewImage: "/assets/garden-gate-locks/menu-preview.png",
     scene: GardenGateLocksScene,
   },
 ];

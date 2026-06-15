@@ -74,7 +74,7 @@ export const computeGardenGateLocksLayout = (
 export const getGardenGateSlots = (layout: GardenGateLocksLayout): GateSlotLayout[] => {
   const { playArea } = layout;
   const ids: GateLockKind[] = ["red-circle", "blue-star", "yellow-square"];
-  const xs = layout.isPortrait ? [0.22, 0.5, 0.78] : [0.32, 0.5, 0.68];
+  const xs = layout.isPortrait ? [0.2, 0.5, 0.8] : [0.27, 0.5, 0.73];
   const y = playArea.y + playArea.height * (layout.isPortrait ? 0.42 : 0.46);
   const gateWidth = (layout.isPortrait ? 102 : 128) * layout.gateScale;
   const gateHeight = (layout.isPortrait ? 150 : 170) * layout.gateScale;

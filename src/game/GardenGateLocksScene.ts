@@ -5,6 +5,7 @@ import {
   isCorrectGardenGateToken,
   isGardenGateComplete,
   type GateLock,
+  type GateCueMode,
   type GateLockKind,
   type GateToken,
 } from "./gardenGateLocks";
@@ -19,19 +20,50 @@ import {
 } from "./gardenGateLocksLayout";
 
 const COLOR_BASKET_ASSET_BASE_PATH = "/assets/color-basket-garden";
+const GARDEN_GATE_ASSET_BASE_PATH = "/assets/garden-gate-locks";
 const REPLAY_BUTTON_ASSET_KEY = "garden-gate-locks-replay-button";
 const REPLAY_BUTTON_ASSET_FILE = "replay_icon_hq_248.png";
+const BACKGROUND_ASSET_KEY = "garden-gate-locks-background";
+const GATE_DOOR_ASSET_KEY = "garden-gate-locks-door-closed";
+const FOUNTAIN_ASSET_KEY = "garden-gate-locks-fountain";
+const SPARKLE_BURST_ASSET_KEY = "garden-gate-locks-sparkle-burst";
 const MIN_NAV_BUTTON_SIZE = 58;
 const MAX_NAV_BUTTON_SIZE = 74;
+
+const GARDEN_GATE_ASSET_FILES: Record<string, string> = {
+  [BACKGROUND_ASSET_KEY]: "background.png",
+  [GATE_DOOR_ASSET_KEY]: "gate-door-closed.png",
+  [FOUNTAIN_ASSET_KEY]: "fountain.png",
+  [SPARKLE_BURST_ASSET_KEY]: "sparkle-burst.png",
+  "garden-gate-lock-red-color": "lock-red-color.png",
+  "garden-gate-lock-red-shape": "lock-red-shape.png",
+  "garden-gate-lock-blue-color": "lock-blue-color.png",
+  "garden-gate-lock-blue-shape": "lock-blue-shape.png",
+  "garden-gate-lock-yellow-color": "lock-yellow-color.png",
+  "garden-gate-lock-yellow-shape": "lock-yellow-shape.png",
+  "garden-gate-token-red-color": "token-red-color.png",
+  "garden-gate-token-red-shape": "token-red-shape.png",
+  "garden-gate-token-blue-color": "token-blue-color.png",
+  "garden-gate-token-blue-shape": "token-blue-shape.png",
+  "garden-gate-token-yellow-color": "token-yellow-color.png",
+  "garden-gate-token-yellow-shape": "token-yellow-shape.png",
+  "garden-gate-reveal-kitten": "reveal-kitten-gate.png",
+  "garden-gate-reveal-puppy": "reveal-puppy-gate.png",
+  "garden-gate-reveal-butterfly": "reveal-butterfly-gate.png",
+  "garden-gate-visitor-kitten": "visitor-kitten.png",
+  "garden-gate-visitor-puppy": "visitor-puppy.png",
+  "garden-gate-visitor-butterfly": "visitor-butterfly.png",
+};
 
 interface GateState {
   data: GateLock;
   slot: GateSlotLayout;
   zone: Phaser.GameObjects.Zone;
   glow: Phaser.GameObjects.Ellipse;
-  door: Phaser.GameObjects.Rectangle;
-  lockFace: Phaser.GameObjects.Container;
-  visitor: Phaser.GameObjects.Container;
+  door: Phaser.GameObjects.Image;
+  lockFace: Phaser.GameObjects.Image;
+  reveal: Phaser.GameObjects.Image;
+  visitor: Phaser.GameObjects.Image;
   opened: boolean;
 }
 
@@ -51,6 +83,7 @@ export class GardenGateLocksScene extends Phaser.Scene {
   private replayButton?: Phaser.GameObjects.Image;
   private replayPulse?: Phaser.Tweens.Tween;
   private replayTimer?: Phaser.Time.TimerEvent;
+  private cueMode: GateCueMode = "color";
 
   constructor() {
     super("GardenGateLocks");
@@ -58,6 +91,9 @@ export class GardenGateLocksScene extends Phaser.Scene {
 
   preload(): void {
     this.load.image(REPLAY_BUTTON_ASSET_KEY, `${COLOR_BASKET_ASSET_BASE_PATH}/${REPLAY_BUTTON_ASSET_FILE}`);
+    for (const [assetKey, file] of Object.entries(GARDEN_GATE_ASSET_FILES)) {
+      this.load.image(assetKey, `${GARDEN_GATE_ASSET_BASE_PATH}/${file}`);
+    }
   }
 
   create(): void {
@@ -91,17 +127,9 @@ export class GardenGateLocksScene extends Phaser.Scene {
     const { playArea } = this.layout;
     const graphics = this.add.graphics();
 
-    graphics.fillGradientStyle(0xbff2ff, 0xbff2ff, 0xd9ffe2, 0xd9ffe2, 1);
+    graphics.fillStyle(0xbff2ff, 1);
     graphics.fillRect(0, 0, this.scale.width, this.scale.height);
-    graphics.fillStyle(0x8fd66e, 1);
-    graphics.fillRoundedRect(playArea.x, playArea.y + playArea.height * 0.44, playArea.width, playArea.height * 0.56, 28);
-    graphics.fillStyle(0x6fb95f, 0.42);
-    graphics.fillEllipse(playArea.centerX, playArea.y + playArea.height * 0.7, playArea.width * 0.92, playArea.height * 0.22);
-
-    this.drawCloud(playArea.x + playArea.width * 0.18, playArea.y + playArea.height * 0.13, 0.85);
-    this.drawCloud(playArea.x + playArea.width * 0.78, playArea.y + playArea.height * 0.18, 0.72);
-    this.drawFlowerPatch(playArea.x + playArea.width * 0.14, playArea.y + playArea.height * 0.62, 0xe96b8f);
-    this.drawFlowerPatch(playArea.x + playArea.width * 0.86, playArea.y + playArea.height * 0.64, 0xf2cf55);
+    this.addCoverImage(BACKGROUND_ASSET_KEY, playArea.centerX, playArea.centerY, playArea.width, playArea.height, 1);
     this.drawTray();
   }
 
@@ -112,8 +140,8 @@ export class GardenGateLocksScene extends Phaser.Scene {
     const trayY = playArea.y + playArea.height * (this.layout.isPortrait ? 0.72 : 0.69);
     const inset = 18 * this.layout.uiScale;
 
-    graphics.fillStyle(0xfff5d8, 0.94);
-    graphics.lineStyle(2 * this.layout.uiScale, 0x8dbf67, 0.5);
+    graphics.fillStyle(0xfff1ce, 0.76);
+    graphics.lineStyle(2 * this.layout.uiScale, 0xb87a35, 0.34);
     graphics.fillRoundedRect(playArea.x + inset, trayY, playArea.width - inset * 2, trayHeight, 24 * this.layout.uiScale);
     graphics.strokeRoundedRect(playArea.x + inset, trayY, playArea.width - inset * 2, trayHeight, 24 * this.layout.uiScale);
     graphics.setDepth(10);
@@ -135,24 +163,18 @@ export class GardenGateLocksScene extends Phaser.Scene {
   }
 
   private drawGate(lock: GateLock, slot: GateSlotLayout): GateState {
-    const gateColor = lock.id === "red-circle" ? 0xf29d78 : lock.id === "blue-star" ? 0x78c8c9 : 0xf1d270;
-    const postColor = lock.id === "red-circle" ? 0xb9654b : lock.id === "blue-star" ? 0x4c8f91 : 0xb99638;
     const baseY = slot.y + slot.gateHeight * 0.1;
-    const leftPost = this.add.rectangle(slot.x - slot.gateWidth * 0.38, baseY, slot.gateWidth * 0.14, slot.gateHeight, postColor);
-    const rightPost = this.add.rectangle(slot.x + slot.gateWidth * 0.38, baseY, slot.gateWidth * 0.14, slot.gateHeight, postColor);
-    const door = this.add.rectangle(slot.x, baseY, slot.gateWidth * 0.62, slot.gateHeight * 0.86, gateColor).setDepth(16);
-    const arch = this.add.ellipse(slot.x, baseY - slot.gateHeight * 0.42, slot.gateWidth * 0.62, slot.gateHeight * 0.42, gateColor);
+    const door = this.add.image(slot.x, baseY, GATE_DOOR_ASSET_KEY).setDepth(16);
     const glow = this.add.ellipse(slot.x, slot.y, slot.lockSize + 42, slot.lockSize + 42, 0xffffff, 0).setDepth(21);
-    const lockFace = this.createLockFace(slot.x, slot.y, lock.color, lock.shape, slot.lockSize).setDepth(23);
+    const lockFace = this.createLockFace(slot.x, slot.y, lock, slot.lockSize).setDepth(23);
     const zoneSize = Math.max(108, slot.lockSize + 46);
     const zone = this.add.zone(slot.x, slot.y, zoneSize, zoneSize).setRectangleDropZone(zoneSize, zoneSize);
-    const visitor = this.createVisitor(lock.visitor, slot.x, baseY + slot.gateHeight * 0.18, slot.scale).setAlpha(0).setDepth(14);
+    const reveal = this.createGateReveal(lock, slot.x, baseY, slot).setAlpha(0).setDepth(18);
+    const visitor = this.createVisitor(lock, slot.x, baseY + slot.gateHeight * 0.2, slot.scale).setAlpha(0).setDepth(14);
 
-    leftPost.setDepth(15);
-    rightPost.setDepth(15);
-    arch.setDepth(15);
+    this.fitClosedGateImage(door, slot);
 
-    return { data: lock, slot, zone, glow, door, lockFace, visitor, opened: false };
+    return { data: lock, slot, zone, glow, door, lockFace, reveal, visitor, opened: false };
   }
 
   private createTokens(): void {
@@ -166,7 +188,10 @@ export class GardenGateLocksScene extends Phaser.Scene {
       const draggable = { data: token, container, origin, visualSize };
 
       this.tokens.push(draggable);
-      container.setInteractive(new Phaser.Geom.Circle(0, 0, visualSize * 0.62), Phaser.Geom.Circle.Contains);
+      container.setInteractive(
+        new Phaser.Geom.Circle(visualSize / 2, visualSize / 2, visualSize * 0.62),
+        Phaser.Geom.Circle.Contains,
+      );
       this.input.setDraggable(container);
       this.registerTokenDragHandlers(draggable);
       this.tweens.add({
@@ -255,8 +280,8 @@ export class GardenGateLocksScene extends Phaser.Scene {
       ease: "Back.out",
       onComplete: () => {
         token.container.setDepth(24);
-        this.openGate(gate);
-        this.sparkle(gate.zone.x, gate.zone.y, gate.data.color, 8);
+        this.openGate(gate, token);
+        this.sparkle(gate.zone.x, gate.zone.y, 8);
 
         if (isGardenGateComplete(this.openedCount, this.totalCount)) {
           this.completeRound();
@@ -278,18 +303,18 @@ export class GardenGateLocksScene extends Phaser.Scene {
     });
   }
 
-  private openGate(gate: GateState): void {
+  private openGate(gate: GateState, token: DraggableGateToken): void {
     this.tweens.add({
-      targets: [gate.door, gate.lockFace],
-      x: gate.slot.x + gate.slot.gateWidth * 0.25,
-      alpha: 0.42,
-      duration: 260,
+      targets: [token.container, gate.lockFace, gate.door],
+      alpha: 0,
+      duration: 180,
       ease: "Sine.inOut",
+      onComplete: () => token.container.destroy(),
     });
     this.tweens.add({
-      targets: gate.visitor,
-      y: gate.visitor.y - 18 * this.layout.uiScale,
+      targets: gate.reveal,
       alpha: 1,
+      y: gate.reveal.y - 8 * this.layout.uiScale,
       duration: 320,
       ease: "Back.out",
     });
@@ -299,13 +324,21 @@ export class GardenGateLocksScene extends Phaser.Scene {
     const { playArea } = this.layout;
     this.input.enabled = false;
     this.drawFountain(playArea.centerX, playArea.y + playArea.height * (this.layout.isPortrait ? 0.58 : 0.62));
-    this.sparkle(playArea.centerX, playArea.y + playArea.height * 0.56, 0xffffff, 18);
+    this.sparkle(playArea.centerX, playArea.y + playArea.height * 0.56, 18);
 
     this.gates.forEach((gate, index) => {
+      gate.visitor.setPosition(gate.reveal.x, gate.reveal.y);
+      this.tweens.add({
+        targets: gate.reveal,
+        alpha: 0,
+        duration: 360,
+        ease: "Sine.inOut",
+      });
       this.tweens.add({
         targets: gate.visitor,
         x: playArea.centerX + (index - 1) * 54 * this.layout.uiScale,
         y: playArea.y + playArea.height * (this.layout.isPortrait ? 0.58 : 0.61),
+        alpha: 1,
         duration: 520 + index * 80,
         ease: "Sine.inOut",
       });
@@ -323,7 +356,10 @@ export class GardenGateLocksScene extends Phaser.Scene {
 
     this.replayButton = this.add.image(position.x, position.y, REPLAY_BUTTON_ASSET_KEY).setDisplaySize(size, size).setDepth(90);
     this.replayButton.setInteractive({ useHandCursor: true });
-    this.replayButton.on("pointerdown", () => this.startRound());
+    this.replayButton.on("pointerdown", () => {
+      this.cueMode = "shape";
+      this.startRound();
+    });
     this.replayPulse = this.tweens.add({
       targets: this.replayButton,
       scaleX: this.replayButton.scaleX * 1.14,
@@ -337,123 +373,93 @@ export class GardenGateLocksScene extends Phaser.Scene {
 
   private createToken(token: GateToken, x: number, y: number, size: number): Phaser.GameObjects.Container {
     const container = this.add.container(x, y);
-    const shadow = this.add.circle(4, 7, size * 0.48, token.shadow, 0.36);
-    const face = this.add.circle(0, 0, size * 0.48, token.color, 1);
-    const shine = this.add.circle(-size * 0.12, -size * 0.16, size * 0.13, 0xffffff, 0.42);
+    const tokenImage = this.add.image(0, 0, token.assetKeys[this.cueMode]);
 
-    container.add([shadow, face, shine, this.createShape(0, 0, size * 0.34, token.shape, 0xffffff, 0.96)]);
+    this.fitImageToBox(tokenImage, size, size);
+    container.setSize(size, size);
+    container.add(tokenImage);
     return container;
   }
 
-  private createLockFace(
-    x: number,
-    y: number,
-    color: number,
-    shape: GateToken["shape"],
-    size: number,
-  ): Phaser.GameObjects.Container {
-    const container = this.add.container(x, y);
-    const back = this.add.circle(0, 0, size * 0.5, color, 1);
-    const rim = this.add.circle(0, 0, size * 0.54).setStrokeStyle(4 * this.layout.uiScale, 0xffffff, 0.76);
+  private createLockFace(x: number, y: number, lock: GateLock, size: number): Phaser.GameObjects.Image {
+    const lockFace = this.add.image(x, y, lock.lockAssetKeys[this.cueMode]);
 
-    container.add([back, rim, this.createShape(0, 0, size * 0.32, shape, 0xffffff, 0.96)]);
-    return container;
+    this.fitImageToBox(lockFace, size, size);
+    return lockFace;
   }
 
-  private createShape(
-    x: number,
-    y: number,
-    size: number,
-    shape: GateToken["shape"],
-    color: number,
-    alpha: number,
-  ): Phaser.GameObjects.Shape {
-    if (shape === "square") {
-      return this.add.rectangle(x, y, size * 1.25, size * 1.25, color, alpha);
-    }
+  private createGateReveal(lock: GateLock, x: number, y: number, slot: GateSlotLayout): Phaser.GameObjects.Image {
+    const reveal = this.add.image(x, y, lock.revealAssetKey);
+    const maxWidth = slot.gateWidth * (this.layout.isPortrait ? 1.22 : 1.72);
+    const maxHeight = slot.gateHeight * 1.16;
 
-    if (shape === "star") {
-      return this.add.star(x, y, 5, size * 0.42, size * 0.86, color, alpha);
-    }
-
-    return this.add.circle(x, y, size * 0.68, color, alpha);
+    this.fitImageToBox(reveal, maxWidth, maxHeight);
+    return reveal;
   }
 
-  private createVisitor(kind: GateLock["visitor"], x: number, y: number, scale: number): Phaser.GameObjects.Container {
-    const size = 42 * scale;
-    const container = this.add.container(x, y);
+  private fitClosedGateImage(image: Phaser.GameObjects.Image, slot: GateSlotLayout): Phaser.GameObjects.Image {
+    const maxWidth = slot.gateWidth * (this.layout.isPortrait ? 1.56 : 2.08);
+    const maxHeight = slot.gateHeight * 1.08;
 
-    if (kind === "butterfly") {
-      container.add([
-        this.add.ellipse(-size * 0.38, 0, size * 0.74, size * 0.9, 0xf59bd6, 1),
-        this.add.ellipse(size * 0.38, 0, size * 0.74, size * 0.9, 0xf4d45f, 1),
-        this.add.ellipse(0, size * 0.08, size * 0.28, size * 0.95, 0x6c4b8f, 1),
-      ]);
-      return container;
-    }
-
-    const bodyColor = kind === "kitten" ? 0xffb067 : 0xd99058;
-    const accentColor = kind === "kitten" ? 0xffd1a3 : 0xffffff;
-    container.add([
-      this.add.circle(0, size * 0.24, size * 0.55, bodyColor, 1),
-      this.add.circle(0, -size * 0.22, size * 0.48, bodyColor, 1),
-      this.add.triangle(-size * 0.24, -size * 0.58, 0, size * 0.1, size * 0.24, size * 0.1, 0, -size * 0.34, bodyColor, 1),
-      this.add.triangle(size * 0.24, -size * 0.58, 0, size * 0.1, size * 0.24, size * 0.1, 0, -size * 0.34, bodyColor, 1),
-      this.add.circle(-size * 0.16, -size * 0.24, size * 0.06, 0x263b35, 1),
-      this.add.circle(size * 0.16, -size * 0.24, size * 0.06, 0x263b35, 1),
-      this.add.circle(0, -size * 0.06, size * 0.08, accentColor, 1),
-    ]);
-
-    return container;
+    return this.fitImageToBox(image, maxWidth, maxHeight);
   }
 
-  private drawCloud(x: number, y: number, scale: number): void {
-    const graphics = this.add.graphics().setDepth(1);
-    graphics.fillStyle(0xffffff, 0.78);
-    graphics.fillCircle(x - 28 * scale, y + 8 * scale, 22 * scale);
-    graphics.fillCircle(x, y, 30 * scale);
-    graphics.fillCircle(x + 34 * scale, y + 9 * scale, 24 * scale);
-    graphics.fillRoundedRect(x - 58 * scale, y + 10 * scale, 116 * scale, 22 * scale, 12 * scale);
-  }
+  private createVisitor(lock: GateLock, x: number, y: number, scale: number): Phaser.GameObjects.Image {
+    const visitor = this.add.image(x, y, lock.visitorAssetKey);
+    const maxWidth = lock.visitor === "butterfly" ? 86 * scale : 78 * scale;
+    const maxHeight = lock.visitor === "butterfly" ? 62 * scale : 72 * scale;
 
-  private drawFlowerPatch(x: number, y: number, color: number): void {
-    for (let index = 0; index < 7; index += 1) {
-      const flowerX = x + (index - 3) * 16 * this.layout.uiScale;
-      const flowerY = y + (index % 2) * 12 * this.layout.uiScale;
-      this.add.rectangle(flowerX, flowerY + 12 * this.layout.uiScale, 4 * this.layout.uiScale, 22 * this.layout.uiScale, 0x3d8748, 1);
-      this.add.star(flowerX, flowerY, 6, 4 * this.layout.uiScale, 11 * this.layout.uiScale, color, 0.86);
-    }
+    this.fitImageToBox(visitor, maxWidth, maxHeight);
+    return visitor;
   }
 
   private drawFountain(x: number, y: number): void {
     const scale = this.layout.uiScale;
-    const graphics = this.add.graphics().setDepth(36);
-    graphics.fillStyle(0x6fd4e8, 0.94);
-    graphics.fillEllipse(x, y + 24 * scale, 110 * scale, 42 * scale);
-    graphics.fillStyle(0xdff9ff, 0.96);
-    graphics.fillEllipse(x, y + 14 * scale, 82 * scale, 25 * scale);
-    graphics.lineStyle(5 * scale, 0xdff9ff, 0.8);
-    graphics.lineBetween(x, y + 6 * scale, x - 44 * scale, y + 2 * scale);
-    graphics.lineBetween(x, y + 6 * scale, x + 44 * scale, y + 2 * scale);
-    graphics.lineBetween(x, y + 6 * scale, x, y - 26 * scale);
+    const fountain = this.add.image(x, y + 18 * scale, FOUNTAIN_ASSET_KEY).setDepth(36);
+
+    this.fitImageToBox(fountain, 180 * scale, 118 * scale);
   }
 
-  private sparkle(x: number, y: number, color: number, count: number): void {
-    for (let index = 0; index < count; index += 1) {
-      const dot = this.add.circle(x, y, Phaser.Math.Between(4, 8) * this.layout.uiScale, color, 0.88).setDepth(80);
-      const angle = (Math.PI * 2 * index) / count;
-      const distance = Phaser.Math.Between(28, 74) * this.layout.uiScale;
-      this.tweens.add({
-        targets: dot,
-        x: x + Math.cos(angle) * distance,
-        y: y + Math.sin(angle) * distance,
-        alpha: 0,
-        scale: 0.3,
-        duration: 560,
-        ease: "Sine.out",
-        onComplete: () => dot.destroy(),
-      });
-    }
+  private sparkle(x: number, y: number, count: number): void {
+    const maxSize = (count > 12 ? 280 : 142) * this.layout.uiScale;
+    const burst = this.add.image(x, y, SPARKLE_BURST_ASSET_KEY).setAlpha(count > 12 ? 0.9 : 0.78).setDepth(80);
+
+    this.fitImageToBox(burst, maxSize, maxSize);
+    const finalScaleX = burst.scaleX * 1.08;
+    const finalScaleY = burst.scaleY * 1.08;
+    burst.setScale(burst.scaleX * 0.62, burst.scaleY * 0.62);
+
+    this.tweens.add({
+      targets: burst,
+      scaleX: finalScaleX,
+      scaleY: finalScaleY,
+      alpha: 0,
+      duration: count > 12 ? 860 : 540,
+      ease: "Sine.out",
+      onComplete: () => burst.destroy(),
+    });
+  }
+
+  private addCoverImage(
+    key: string,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    depth: number,
+  ): Phaser.GameObjects.Image {
+    const image = this.add.image(x, y, key).setDepth(depth);
+    const scale = Math.max(width / image.width, height / image.height);
+
+    image.setScale(scale);
+    return image;
+  }
+
+  private fitImageToBox(image: Phaser.GameObjects.Image, maxWidth: number, maxHeight: number): Phaser.GameObjects.Image {
+    const scale = Math.min(maxWidth / image.width, maxHeight / image.height);
+
+    image.setScale(scale);
+    return image;
   }
 
   private getNavButtonSize(): number {
