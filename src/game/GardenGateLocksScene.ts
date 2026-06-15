@@ -357,7 +357,7 @@ export class GardenGateLocksScene extends Phaser.Scene {
     this.replayButton = this.add.image(position.x, position.y, REPLAY_BUTTON_ASSET_KEY).setDisplaySize(size, size).setDepth(90);
     this.replayButton.setInteractive({ useHandCursor: true });
     this.replayButton.on("pointerdown", () => {
-      this.cueMode = "shape";
+      this.cueMode = "color";
       this.startRound();
     });
     this.replayPulse = this.tweens.add({
