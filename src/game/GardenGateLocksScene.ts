@@ -90,7 +90,7 @@ export class GardenGateLocksScene extends Phaser.Scene {
   private replayButton?: Phaser.GameObjects.Image;
   private replayPulse?: Phaser.Tweens.Tween;
   private replayTimer?: Phaser.Time.TimerEvent;
-  private cueMode: GateCueMode = "color";
+  private cueMode: GateCueMode = "shape";
 
   constructor() {
     super("GardenGateLocks");
@@ -363,7 +363,7 @@ export class GardenGateLocksScene extends Phaser.Scene {
     this.replayButton = this.add.image(position.x, position.y, REPLAY_BUTTON_ASSET_KEY).setDisplaySize(size, size).setDepth(90);
     this.replayButton.setInteractive({ useHandCursor: true });
     this.replayButton.on("pointerdown", () => {
-      this.cueMode = "color";
+      this.cueMode = "shape";
       this.startRound();
     });
     this.replayPulse = this.tweens.add({
